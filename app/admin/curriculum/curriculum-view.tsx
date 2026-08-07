@@ -5,12 +5,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { adminFetch } from "@/lib/admin-fetch";
 import type { CurriculumDayRow, SystemConfigRow } from "@/lib/supabase/types";
-import { ImageIcon } from "lucide-react";
+import { ImageIcon, Loader2 } from "lucide-react";
 import { CurriculumDayDialog } from "./curriculum-day-dialog";
 
 export function CurriculumView() {
@@ -120,6 +122,10 @@ function PersonaEditor() {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [testMessage, setTestMessage] = useState("");
+  const [testReply, setTestReply] = useState<string | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
 
   const load = useCallback(async () => {
     const result = await adminFetch<{ config: SystemConfigRow[] }>("/api/admin/config");
@@ -154,8 +160,63 @@ function PersonaEditor() {
     }
   }
 
+  async function runTest() {
+    setTesting(true);
+    setTestError(null);
+    setTestReply(null);
+    try {
+      const result = await adminFetch<{ reply: string }>("/api/admin/config/test-ai", {
+        method: "POST",
+        body: JSON.stringify({ message: testMessage }),
+      });
+      setTestReply(result.reply);
+    } catch (err) {
+      setTestError(err instanceof Error ? err.message : "AI Engine test failed");
+    } finally {
+      setTesting(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Test AI Engine</CardTitle>
+          <CardDescription>
+            Send a one-off message through the AI engine to confirm AI_API_KEY is configured correctly, without
+            waiting for a real WhatsApp reflection.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {testError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{testError}</AlertDescription>
+            </Alert>
+          ) : null}
+          {testReply ? (
+            <div className="rounded-md border border-border bg-muted/50 p-3 text-sm">
+              <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                AI reply
+              </p>
+              <p className="whitespace-pre-wrap">{testReply}</p>
+            </div>
+          ) : null}
+          <div className="space-y-2">
+            <Label htmlFor="test-message">Test message</Label>
+            <Input
+              id="test-message"
+              placeholder="This is a test message from the admin dashboard..."
+              value={testMessage}
+              onChange={(event) => setTestMessage(event.target.value)}
+            />
+          </div>
+          <Button onClick={runTest} disabled={testing} className="gap-1.5" variant="secondary">
+            {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+            {testing ? "Sending..." : "Send test message"}
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Global AI Auto-Reply</CardTitle>

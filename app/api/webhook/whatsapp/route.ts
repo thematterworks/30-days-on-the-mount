@@ -134,13 +134,32 @@ async function handleInboundMessage(message: {
 
   const personaSystemPrompt = await getAiPersonaSystemPrompt();
 
-  const reply = await generateReflectionReply({
-    personaSystemPrompt,
-    dayNumber: existingUser.current_day,
-    dayTitle: curriculumDay?.title ?? `Day ${existingUser.current_day}`,
-    dayAiGuidancePrompt: curriculumDay?.ai_guidance_prompt ?? "",
-    userMessage: text,
-  });
+  let reply: string;
+  try {
+    reply = await generateReflectionReply({
+      personaSystemPrompt,
+      dayNumber: existingUser.current_day,
+      dayTitle: curriculumDay?.title ?? `Day ${existingUser.current_day}`,
+      dayAiGuidancePrompt: curriculumDay?.ai_guidance_prompt ?? "",
+      userMessage: text,
+    });
+  } catch (error) {
+    // Log the failure as a visible message_logs row (status: failed) instead of
+    // silently dropping the reply — this is what makes AI Engine misconfiguration
+    // (e.g. a bad AI_API_KEY) show up in the Live Conversation Inbox rather than
+    // only in Vercel's function logs.
+    const message = error instanceof Error ? error.message : "Unknown AI engine error";
+    console.error("AI reflection reply failed", error);
+    await supabase.from("message_logs").insert({
+      phone_number: from,
+      direction: "outbound",
+      message_type: "ai_generated",
+      message_body: `[AI reply failed: ${message}]`,
+      whatsapp_message_id: null,
+      status: "failed",
+    });
+    return;
+  }
 
   const result = await sendFreeformTextMessage(from, reply);
 

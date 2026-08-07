@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { adminFetch } from "@/lib/admin-fetch";
-import { Bot, Send, User as UserIcon } from "lucide-react";
+import { AlertTriangle, Bot, Send, User as UserIcon } from "lucide-react";
 import type { MessageLogRow, UserRow } from "@/lib/supabase/types";
 
 interface Conversation {
@@ -202,17 +202,38 @@ export function InboxView() {
 function MessageBubble({ message }: { message: MessageLogRow }) {
   const inbound = message.direction === "inbound";
   const ai = message.message_type === "ai_generated";
+  const failed = message.status === "failed";
   return (
     <div className={cn("flex", inbound ? "justify-start" : "justify-end")}>
       <div
         className={cn(
           "max-w-[75%] rounded-lg px-3 py-2 text-sm",
-          inbound ? "bg-muted text-foreground" : ai ? "bg-primary/15 text-foreground" : "bg-primary text-primary-foreground",
+          failed
+            ? "border border-destructive/40 bg-destructive/10 text-destructive"
+            : inbound
+              ? "bg-muted text-foreground"
+              : ai
+                ? "bg-primary/15 text-foreground"
+                : "bg-primary text-primary-foreground",
         )}
       >
         <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wide opacity-70">
-          {inbound ? <UserIcon className="h-3 w-3" /> : ai ? <Bot className="h-3 w-3" /> : null}
-          {inbound ? "Participant" : ai ? "AI reply" : message.message_type === "template" ? "Template" : "Admin"}
+          {failed ? (
+            <AlertTriangle className="h-3 w-3" />
+          ) : inbound ? (
+            <UserIcon className="h-3 w-3" />
+          ) : ai ? (
+            <Bot className="h-3 w-3" />
+          ) : null}
+          {failed
+            ? "Failed"
+            : inbound
+              ? "Participant"
+              : ai
+                ? "AI reply"
+                : message.message_type === "template"
+                  ? "Template"
+                  : "Admin"}
         </div>
         <p className="whitespace-pre-wrap">{message.message_body}</p>
       </div>
