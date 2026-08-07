@@ -8,6 +8,7 @@ interface UpdateBody {
   template_name?: string;
   fallback_text?: string;
   ai_guidance_prompt?: string;
+  media_url?: string | null;
 }
 
 export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/admin/curriculum/[day]">) {
@@ -28,6 +29,9 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/admin/
     if (typeof body[field] === "string") {
       update[field] = body[field];
     }
+  }
+  if (body.media_url === null || typeof body.media_url === "string") {
+    update.media_url = body.media_url;
   }
 
   if (Object.keys(update).length === 0) {

@@ -3,21 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { adminFetch } from "@/lib/admin-fetch";
 import type { CurriculumDayRow, SystemConfigRow } from "@/lib/supabase/types";
+import { ImageIcon } from "lucide-react";
+import { CurriculumDayDialog } from "./curriculum-day-dialog";
 
 export function CurriculumView() {
   return (
@@ -47,15 +41,17 @@ export function CurriculumView() {
 
 function CurriculumEditor() {
   const [days, setDays] = useState<CurriculumDayRow[]>([]);
-  const [selectedDay, setSelectedDay] = useState(0);
-  const [form, setForm] = useState<CurriculumDayRow | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [activeDayNumber, setActiveDayNumber] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const result = await adminFetch<{ days: CurriculumDayRow[] }>("/api/admin/curriculum");
-    setDays(result.days);
+    try {
+      const result = await adminFetch<{ days: CurriculumDayRow[] }>("/api/admin/curriculum");
+      setDays(result.days);
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Failed to load curriculum");
+    }
   }, []);
 
   useEffect(() => {
@@ -64,116 +60,55 @@ function CurriculumEditor() {
     })();
   }, [load]);
 
-  useEffect(() => {
-    (() => {
-      const day = days.find((d) => d.day_number === selectedDay);
-      setForm(day ?? null);
-    })();
-  }, [days, selectedDay]);
+  const activeDay = days.find((d) => d.day_number === activeDayNumber) ?? null;
 
-  async function handleSave() {
-    if (!form) return;
-    setSaving(true);
-    setError(null);
-    setStatus(null);
-    try {
-      await adminFetch(`/api/admin/curriculum/${form.day_number}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          title: form.title,
-          template_name: form.template_name,
-          fallback_text: form.fallback_text,
-          ai_guidance_prompt: form.ai_guidance_prompt,
-        }),
-      });
-      setStatus("Saved.");
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSaving(false);
-    }
+  function handleSaved(updated: CurriculumDayRow) {
+    setDays((prev) => prev.map((d) => (d.day_number === updated.day_number ? updated : d)));
   }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Day-by-day editor</CardTitle>
-        <CardDescription>Choose a day, then edit its template, fallback text, and AI guidance.</CardDescription>
+        <CardDescription>Click a day to edit its template, teaching, AI guidance, and media.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="max-w-xs">
-          <Label>Day</Label>
-          <Select value={String(selectedDay)} onValueChange={(v) => setSelectedDay(Number(v))}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="max-h-72">
-              {Array.from({ length: 31 }, (_, day) => (
-                <SelectItem key={day} value={String(day)}>
-                  Day {day}
-                  {days.find((d) => d.day_number === day)?.title
-                    ? ` — ${days.find((d) => d.day_number === day)?.title}`
-                    : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {form ? (
-          <div className="space-y-4">
-            {error ? (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : null}
-            {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
-
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={form.title}
-                onChange={(event) => setForm({ ...form, title: event.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="template">Meta template name</Label>
-              <Input
-                id="template"
-                value={form.template_name}
-                onChange={(event) => setForm({ ...form, template_name: event.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="fallback">Fallback text (full rich-text prompt)</Label>
-              <Textarea
-                id="fallback"
-                rows={5}
-                value={form.fallback_text}
-                onChange={(event) => setForm({ ...form, fallback_text: event.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="guidance">AI guidance prompt for this day</Label>
-              <Textarea
-                id="guidance"
-                rows={4}
-                value={form.ai_guidance_prompt}
-                onChange={(event) => setForm({ ...form, ai_guidance_prompt: event.target.value })}
-              />
-            </div>
-
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Saving..." : "Save day"}
-            </Button>
-          </div>
+        {loadError ? (
+          <Alert variant="destructive">
+            <AlertDescription>{loadError}</AlertDescription>
+          </Alert>
         ) : null}
+
+        <div className="grid grid-cols-4 gap-3 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
+          {Array.from({ length: 31 }, (_, dayNumber) => dayNumber).map((dayNumber) => {
+            const dayData = days.find((d) => d.day_number === dayNumber);
+            const populated = Boolean(dayData?.fallback_text.trim());
+            return (
+              <button
+                key={dayNumber}
+                type="button"
+                onClick={() => setActiveDayNumber(dayNumber)}
+                className="flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card p-3 text-center transition-colors hover:border-primary/50 hover:bg-accent"
+              >
+                <span className="text-lg font-semibold tabular-nums">{dayNumber}</span>
+                {dayData?.media_url ? <ImageIcon className="h-3 w-3 text-muted-foreground" /> : null}
+                <Badge variant={populated ? "default" : "outline"} className="px-1.5 py-0 text-[10px]">
+                  {populated ? "Populated" : "Empty"}
+                </Badge>
+              </button>
+            );
+          })}
+        </div>
       </CardContent>
+
+      {activeDay ? (
+        <CurriculumDayDialog
+          day={activeDay}
+          open={activeDayNumber !== null}
+          onOpenChange={(open) => !open && setActiveDayNumber(null)}
+          onSaved={handleSaved}
+        />
+      ) : null}
     </Card>
   );
 }

@@ -41,6 +41,7 @@ export type CurriculumDayRow = {
   template_name: string;
   fallback_text: string;
   ai_guidance_prompt: string;
+  media_url: string | null;
 };
 
 export type SystemConfigRow = {
