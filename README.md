@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 30 Days on the Mount — Command Center
 
-## Getting Started
+Admin dashboard and backend infrastructure for the "30 Days on the Mount" WhatsApp-based spiritual immersion practice. Next.js (App Router) on Vercel, Supabase (Postgres), the Meta WhatsApp Cloud API, and Anthropic's Claude for reflection replies.
 
-First, run the development server:
+## Stack
+
+- **Frontend:** Next.js, Tailwind CSS v4, shadcn/ui, Lucide icons
+- **Database:** Supabase (Postgres) with RLS enabled and no anon/authenticated policies — every query goes through the server-only service-role client
+- **Hosting:** Vercel Functions + Vercel Cron
+- **Messaging:** WhatsApp Cloud API (Meta Graph API v19.0)
+- **AI:** Anthropic Claude (`claude-opus-4-8`) via `@anthropic-ai/sdk`
+- **Admin auth:** single-operator email/password, HMAC-signed session cookie (no external auth provider)
+
+## Setup
+
+### 1. Supabase
+
+Create a project, then run the migration:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# via the Supabase SQL editor, or the CLI:
+supabase db push
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The migration (`supabase/migrations/0001_init.sql`) creates `users`, `message_logs`, `curriculum_days`, `system_config`, `community_posts`, and `blog_posts`, seeds Day 0's welcome copy and the global AI persona prompt, and enables RLS with no policies (service-role only).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2. Meta WhatsApp Cloud API
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Create a Meta App with the WhatsApp product, provision a number (via Twilio or Meta directly — the number's origin doesn't matter to this app; only the Meta Phone Number ID and access token do).
+2. In the Meta App dashboard, set the webhook callback URL to `https://<your-domain>/api/webhook/whatsapp` and the verify token to the value you'll set as `WHATSAPP_VERIFY_TOKEN`.
+3. Subscribe to the `messages` webhook field.
+4. Create and get approval for your Meta message templates (`day_00_welcome`, `day_01_prompt`, ... `day_30_prompt` by default — template names are editable per day in the Curriculum tab).
 
-## Learn More
+### 3. Environment variables
 
-To learn more about Next.js, take a look at the following resources:
+Copy `.env.example` to `.env.local` and fill in every value. To generate `ADMIN_PASSWORD_HASH`:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+node -e "require('bcryptjs').hash(process.argv[1], 10).then(console.log)" 'your-password'
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 4. Install and run
 
-## Deploy on Vercel
+```bash
+npm install
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Visit `/admin/login` to sign in to the dashboard.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 5. Deploy
+
+Push to Vercel and set the same environment variables in the project settings. `vercel.json` wires the daily delivery cron to `0 7 * * *` (7:00 AM UTC) — Vercel Cron sends `Authorization: Bearer $CRON_SECRET`, which `/api/cron/daily-delivery` verifies.
+
+## Architecture notes
+
+- **`proxy.ts`** (the Next.js 16 successor to `middleware.ts`) guards every `/admin/*` and `/api/admin/*` route by verifying the signed session cookie; unauthenticated requests are redirected to `/admin/login` (or `401` for API routes).
+- **`/api/webhook/whatsapp`** handles the Meta `GET` handshake and `POST` message/status events: new numbers are onboarded with the Day 0 template, existing users get their inbound message logged and — if the global AI toggle is on and the user isn't paused — an AI-generated free-form reply within the 24-hour customer service window.
+- **`/api/cron/daily-delivery`** advances every active participant one day at a time, sending that day's approved template and marking anyone past Day 30 as `completed`.
+- All Supabase access goes through `lib/supabase/server.ts`, which uses the service-role key and is marked `server-only` — it can never be imported into a Client Component.
