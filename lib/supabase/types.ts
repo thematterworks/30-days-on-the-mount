@@ -6,7 +6,7 @@
 // row types from the Database generic, which silently collapses every query
 // result to `never`. See supabase/supabase-js#soon-to-be-known-gotcha.
 
-export type UserStatus = "active" | "paused" | "completed" | "opted_out";
+export type UserStatus = "pending" | "active" | "paused" | "completed" | "opted_out";
 export type MessageDirection = "inbound" | "outbound";
 export type MessageType = "template" | "freeform" | "ai_generated";
 export type MessageStatus = "sent" | "delivered" | "read" | "failed";

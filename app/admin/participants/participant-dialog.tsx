@@ -96,9 +96,19 @@ export function ParticipantDialog({
                 size="sm"
                 variant="outline"
                 disabled={busy}
-                onClick={() => run(() => patch({ status: "active" }))}
+                onClick={() =>
+                  run(() =>
+                    // A 'pending' participant has current_day = -1 (the
+                    // waiting-room sentinel) — resuming them must also set
+                    // current_day to 0, or they'd end up 'active' with no
+                    // valid day, which the cron and webhook can't resolve
+                    // against curriculum_days. A 'paused' participant keeps
+                    // their existing current_day and just continues.
+                    patch(user.status === "pending" ? { status: "active", current_day: 0 } : { status: "active" }),
+                  )
+                }
               >
-                Resume
+                {user.status === "pending" ? "Activate" : "Resume"}
               </Button>
               <Button
                 size="sm"

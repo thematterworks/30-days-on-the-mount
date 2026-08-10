@@ -32,15 +32,23 @@ export function LoginForm() {
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         setError(body.error ?? "Login failed");
-        setSubmitting(false);
         return;
       }
 
-      const next = searchParams.get("next") || "/admin";
-      router.push(next);
+      // The session cookie is already set on the browser by the time this
+      // fetch resolves. router.refresh() invalidates the Next.js Router
+      // Cache *before* we navigate, so /admin re-runs proxy.ts and
+      // re-fetches its Server Components against the fresh cookie instead
+      // of potentially replaying a cached redirect-to-login response from
+      // before you were authenticated.
       router.refresh();
+      router.push(searchParams.get("next") || "/admin");
     } catch {
       setError("Something went wrong. Please try again.");
+    } finally {
+      // Always release the button, even if navigation stalls for any
+      // reason — previously this only ran on the error path, so a stalled
+      // redirect left the form stuck on "Signing in..." with no way out.
       setSubmitting(false);
     }
   }

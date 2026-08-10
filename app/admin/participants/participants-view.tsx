@@ -24,6 +24,7 @@ import type { UserRow, UserStatus } from "@/lib/supabase/types";
 import { ParticipantDialog } from "./participant-dialog";
 
 const STATUS_VARIANT: Record<UserStatus, "default" | "secondary" | "outline" | "destructive"> = {
+  pending: "outline",
   active: "default",
   paused: "secondary",
   completed: "outline",
@@ -70,6 +71,7 @@ export function ParticipantsView() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="paused">Paused</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
@@ -96,7 +98,7 @@ export function ParticipantsView() {
                 <TableCell>
                   <Badge variant={STATUS_VARIANT[user.status]}>{user.status}</Badge>
                 </TableCell>
-                <TableCell>{user.current_day}</TableCell>
+                <TableCell>{user.current_day === -1 ? "—" : user.current_day}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {new Date(user.last_interaction_at).toLocaleString()}
                 </TableCell>

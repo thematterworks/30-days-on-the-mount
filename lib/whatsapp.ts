@@ -14,8 +14,9 @@ interface WhatsAppSendResult {
 }
 
 async function postToGraphApi(body: Record<string, unknown>): Promise<WhatsAppSendResult> {
+  let response: Response;
   try {
-    const response = await fetch(graphUrl(`${env.WHATSAPP_PHONE_NUMBER_ID}/messages`), {
+    response = await fetch(graphUrl(`${env.WHATSAPP_PHONE_NUMBER_ID}/messages`), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${env.WHATSAPP_TOKEN}`,
@@ -23,21 +24,34 @@ async function postToGraphApi(body: Record<string, unknown>): Promise<WhatsAppSe
       },
       body: JSON.stringify({ messaging_product: "whatsapp", ...body }),
     });
-
-    const payload = await response.json();
-
-    if (!response.ok) {
-      const message =
-        payload?.error?.message ?? `WhatsApp API responded with status ${response.status}`;
-      return { ok: false, messageId: null, error: message };
-    }
-
-    const messageId: string | null = payload?.messages?.[0]?.id ?? null;
-    return { ok: true, messageId, error: null };
   } catch (error) {
+    // Network-level failure (DNS, timeout, connection reset) — fetch itself
+    // threw before we ever got an HTTP response.
+    console.error("WhatsApp Graph API request threw before a response was received:", error);
     const message = error instanceof Error ? error.message : "Unknown WhatsApp API error";
     return { ok: false, messageId: null, error: message };
   }
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    // This is the failure that was previously swallowed: the webhook's own
+    // POST handler returns 200 to Meta regardless (so Meta doesn't retry
+    // the webhook delivery itself), but that 200 has nothing to do with
+    // whether the outbound message actually sent. Log the exact Meta error
+    // object here so it shows up in Vercel logs.
+    console.error("WhatsApp Graph API request failed:", {
+      status: response.status,
+      statusText: response.statusText,
+      error: payload?.error ?? payload,
+    });
+    const message =
+      payload?.error?.message ?? `WhatsApp API responded with status ${response.status}`;
+    return { ok: false, messageId: null, error: message };
+  }
+
+  const messageId: string | null = payload?.messages?.[0]?.id ?? null;
+  return { ok: true, messageId, error: null };
 }
 
 /**

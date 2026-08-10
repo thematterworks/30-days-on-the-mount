@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { env } from "@/lib/env";
 
 export const ADMIN_SESSION_COOKIE = "mount_admin_session";
-export const ADMIN_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
+export const ADMIN_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
 interface SessionPayload {
   email: string;
