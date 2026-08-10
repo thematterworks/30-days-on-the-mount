@@ -50,11 +50,11 @@ Visit `/admin/login` to sign in to the dashboard.
 
 ### 5. Deploy
 
-Push to Vercel and set the same environment variables in the project settings. `vercel.json` wires the daily delivery cron to `0 7 * * *` (7:00 AM UTC) — Vercel Cron sends `Authorization: Bearer $CRON_SECRET`, which `/api/cron/daily-delivery` verifies.
+Push to Vercel and set the same environment variables in the project settings. `vercel.json` wires the daily push cron to `0 14 * * *` (2:00 PM UTC) — Vercel Cron sends `Authorization: Bearer $CRON_SECRET`, which `/api/cron/daily-push` verifies.
 
 ## Architecture notes
 
 - **`proxy.ts`** (the Next.js 16 successor to `middleware.ts`) guards every `/admin/*` and `/api/admin/*` route by verifying the signed session cookie; unauthenticated requests are redirected to `/admin/login` (or `401` for API routes).
-- **`/api/webhook/whatsapp`** handles the Meta `GET` handshake and `POST` message/status events: new numbers are onboarded with the Day 0 template, existing users get their inbound message logged and — if the global AI toggle is on and the user isn't paused — an AI-generated free-form reply within the 24-hour customer service window.
-- **`/api/cron/daily-delivery`** advances every active participant one day at a time, sending that day's approved template and marking anyone past Day 30 as `completed`.
+- **`/api/webhook/whatsapp`** handles the Meta `GET` handshake and `POST` message/status events. New numbers land in a `pending` waiting room (no auto-start); a switchboard checks static ice-breaker replies first, then routes `pending` participants through a Gatekeeper AI that only decides readiness, and `active` participants through the day-aware reflection AI — all within the 24-hour customer service window, gated by the global AI toggle and per-user pause.
+- **`/api/cron/daily-push`** advances every active participant one day at a time: it sends the *next* day's template (`current_day + 1`) and only then advances `current_day` to match, since Day 0 itself is already sent in real time at activation — and marks anyone past Day 30 as `completed`.
 - All Supabase access goes through `lib/supabase/server.ts`, which uses the service-role key and is marked `server-only` — it can never be imported into a Client Component.
