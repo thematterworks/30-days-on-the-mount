@@ -104,6 +104,68 @@ export async function generateGatekeeperReply(userMessage: string): Promise<stri
   return text ?? "Whenever you're ready to begin, just let me know!";
 }
 
+/**
+ * Reply to a participant responding to their evening check-in — distinct
+ * pastoral-care persona from the daily reflection AI on purpose: no
+ * checklist/grade/fix, just validating the day's friction and pointing
+ * back to grace and rest. `eveningSystemPrompt` comes from system_config
+ * (evening_reflection_system_prompt), editable from the admin dashboard.
+ */
+export async function generateEveningReflectionReply(
+  eveningSystemPrompt: string,
+  userMessage: string,
+): Promise<string> {
+  const text = await callClaude(eveningSystemPrompt, userMessage, 512);
+  return text ?? "Whatever today held, you are held too. Rest well tonight — grace doesn't keep score.";
+}
+
+const EXTRACT_HOUR_SYSTEM_PROMPT =
+  "The user is choosing what hour of the day they want to receive their daily message for a 30-day spiritual " +
+  "practice. Determine the hour they mean, in 24-hour format (0-23), local to their own stated time — do not " +
+  "perform any timezone conversion, just interpret the hour as they said it. Interpret vague terms reasonably: " +
+  '"morning" -> 8, "afternoon" -> 14, "evening" -> 19, "night" -> 21, "noon" -> 12, "midnight" -> 0. If they give ' +
+  'a specific time (e.g. "7am", "7:30pm", "18:00", "around 6 in the evening"), convert it precisely to 24-hour ' +
+  "format and round to the nearest whole hour. Reply with ONLY the hour as a plain integer from 0 to 23 — no " +
+  "other text, no punctuation, no explanation. If their message does not indicate any time at all, reply with " +
+  "ONLY the word UNKNOWN.";
+
+/**
+ * Extracts a 0-23 local hour from a freeform reply during onboarding
+ * (status = 'pending', onboarding_step = 'awaiting_time'). Returns null if
+ * Claude can't determine a specific hour, so the caller can ask again
+ * instead of guessing.
+ */
+export async function extractPreferredHour(userMessage: string): Promise<number | null> {
+  const text = await callClaude(EXTRACT_HOUR_SYSTEM_PROMPT, userMessage, 20);
+  if (!text) return null;
+
+  const trimmed = text.trim();
+  if (!/^\d{1,2}$/.test(trimmed)) return null;
+
+  const hour = Number(trimmed);
+  return hour >= 0 && hour <= 23 ? hour : null;
+}
+
+const DETECT_YES_NO_SYSTEM_PROMPT =
+  "The user is being asked a yes/no question about whether they want to also receive their daily messages by " +
+  "email, in addition to WhatsApp. Determine whether their reply means yes or no. Reply with ONLY the word YES " +
+  "or ONLY the word NO — no other text. If their message is genuinely ambiguous and does not indicate yes or " +
+  "no, reply with ONLY the word UNKNOWN.";
+
+/**
+ * Detects yes/no from a freeform reply during onboarding (awaiting_email_pref).
+ * Returns null if genuinely ambiguous, so the caller can ask again.
+ */
+export async function detectYesNo(userMessage: string): Promise<boolean | null> {
+  const text = await callClaude(DETECT_YES_NO_SYSTEM_PROMPT, userMessage, 10);
+  if (!text) return null;
+
+  const normalized = text.trim().toUpperCase();
+  if (normalized === "YES") return true;
+  if (normalized === "NO") return false;
+  return null;
+}
+
 /** Maps Anthropic SDK errors to a specific, actionable message for admins. */
 function describeAnthropicError(error: unknown): string {
   if (error instanceof AuthenticationError) {

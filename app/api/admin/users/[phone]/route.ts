@@ -1,15 +1,29 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import type { UserRow, UserStatus } from "@/lib/supabase/types";
+import type { OnboardingStep, UserRow, UserStatus } from "@/lib/supabase/types";
 
 const VALID_STATUSES: UserStatus[] = ["active", "paused", "completed", "opted_out"];
+const VALID_ONBOARDING_STEPS: OnboardingStep[] = [
+  "not_started",
+  "awaiting_name",
+  "awaiting_time",
+  "awaiting_email_pref",
+  "awaiting_email_address",
+  "completed",
+];
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface UpdateBody {
   status?: UserStatus;
   current_day?: number;
   notes?: string;
   ai_paused?: boolean;
+  onboarding_step?: OnboardingStep;
+  first_name?: string | null;
+  preferred_delivery_hour?: number | null;
+  email_address?: string | null;
 }
 
 export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/admin/users/[phone]">) {
@@ -39,6 +53,35 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/admin/
   }
   if (body.ai_paused !== undefined) {
     update.ai_paused = body.ai_paused;
+  }
+  if (body.onboarding_step !== undefined) {
+    if (!VALID_ONBOARDING_STEPS.includes(body.onboarding_step)) {
+      return NextResponse.json({ error: "Invalid onboarding_step" }, { status: 400 });
+    }
+    update.onboarding_step = body.onboarding_step;
+  }
+  if (body.first_name !== undefined) {
+    update.first_name = typeof body.first_name === "string" ? body.first_name.trim().slice(0, 50) || null : null;
+  }
+  if (body.preferred_delivery_hour !== undefined) {
+    if (
+      body.preferred_delivery_hour !== null &&
+      (!Number.isInteger(body.preferred_delivery_hour) ||
+        body.preferred_delivery_hour < 0 ||
+        body.preferred_delivery_hour > 23)
+    ) {
+      return NextResponse.json(
+        { error: "preferred_delivery_hour must be an integer between 0 and 23, or null" },
+        { status: 400 },
+      );
+    }
+    update.preferred_delivery_hour = body.preferred_delivery_hour;
+  }
+  if (body.email_address !== undefined) {
+    if (body.email_address !== null && !EMAIL_PATTERN.test(body.email_address)) {
+      return NextResponse.json({ error: "email_address is not a valid email address" }, { status: 400 });
+    }
+    update.email_address = body.email_address;
   }
 
   if (Object.keys(update).length === 0) {

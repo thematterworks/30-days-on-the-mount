@@ -11,6 +11,7 @@ import {
   BookOpen,
   Newspaper,
   Mountain,
+  Palette,
   LogOut,
 } from "lucide-react";
 
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/admin/participants", label: "Participants", icon: Users },
   { href: "/admin/curriculum", label: "Curriculum & AI", icon: BookOpen },
   { href: "/admin/community", label: "Community & Blog", icon: Newspaper },
+  { href: "/admin/email-settings", label: "Email Design", icon: Palette },
 ];
 
 export function Sidebar() {

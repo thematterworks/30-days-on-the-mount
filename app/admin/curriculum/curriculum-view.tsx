@@ -126,14 +126,20 @@ function PersonaEditor() {
   const [testReply, setTestReply] = useState<string | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
+  const [eveningTemplateName, setEveningTemplateName] = useState("");
+  const [eveningSystemPrompt, setEveningSystemPrompt] = useState("");
 
   const load = useCallback(async () => {
     const result = await adminFetch<{ config: SystemConfigRow[] }>("/api/admin/config");
     setConfig(result.config);
     const prompt = result.config.find((c) => c.key === "ai_persona_system_prompt");
     const autoReply = result.config.find((c) => c.key === "ai_auto_reply_enabled");
+    const eveningTemplate = result.config.find((c) => c.key === "evening_checkin_template_name");
+    const eveningPrompt = result.config.find((c) => c.key === "evening_reflection_system_prompt");
     setSystemPrompt(prompt?.value ?? "");
     setAutoReplyEnabled((autoReply?.value ?? "true") === "true");
+    setEveningTemplateName(eveningTemplate?.value ?? "");
+    setEveningSystemPrompt(eveningPrompt?.value ?? "");
   }, []);
 
   useEffect(() => {
@@ -261,6 +267,53 @@ function PersonaEditor() {
           <Button onClick={() => save("ai_persona_system_prompt", systemPrompt)} disabled={saving}>
             {saving ? "Saving..." : "Save system prompt"}
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Evening Check-In</CardTitle>
+          <CardDescription>
+            A second daily touchpoint inviting participants to reflect on the day&apos;s practice and any friction —
+            no checklist or grade, just awareness, surrender, and grace. Replies are detected by whichever template
+            was sent to the participant most recently, so this only applies until the next morning&apos;s send.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor="evening-template">Meta-approved template name</Label>
+            <Input
+              id="evening-template"
+              value={eveningTemplateName}
+              onChange={(event) => setEveningTemplateName(event.target.value)}
+            />
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={saving}
+              onClick={() => save("evening_checkin_template_name", eveningTemplateName)}
+            >
+              Save template name
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="evening-prompt">Evening reflection persona</Label>
+            <Textarea
+              id="evening-prompt"
+              rows={10}
+              value={eveningSystemPrompt}
+              onChange={(event) => setEveningSystemPrompt(event.target.value)}
+              className="font-mono text-xs"
+            />
+            <Button
+              size="sm"
+              disabled={saving}
+              onClick={() => save("evening_reflection_system_prompt", eveningSystemPrompt)}
+            >
+              Save evening persona
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

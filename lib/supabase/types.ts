@@ -7,6 +7,13 @@
 // result to `never`. See supabase/supabase-js#soon-to-be-known-gotcha.
 
 export type UserStatus = "pending" | "active" | "paused" | "completed" | "opted_out";
+export type OnboardingStep =
+  | "not_started"
+  | "awaiting_name"
+  | "awaiting_time"
+  | "awaiting_email_pref"
+  | "awaiting_email_address"
+  | "completed";
 export type MessageDirection = "inbound" | "outbound";
 export type MessageType = "template" | "freeform" | "ai_generated";
 export type MessageStatus = "sent" | "delivered" | "read" | "failed";
@@ -22,6 +29,12 @@ export type UserRow = {
   ai_paused: boolean;
   notes: string | null;
   created_at: string;
+  first_name: string | null;
+  preferred_delivery_hour: number | null;
+  timezone: string;
+  wants_email: boolean;
+  email_address: string | null;
+  onboarding_step: OnboardingStep;
 };
 
 export type MessageLogRow = {
