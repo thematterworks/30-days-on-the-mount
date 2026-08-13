@@ -55,6 +55,7 @@ export function CurriculumDayDialog({
           template_name: form.template_name,
           fallback_text: form.fallback_text,
           ai_guidance_prompt: form.ai_guidance_prompt,
+          evening_prompt_text: form.evening_prompt_text,
         }),
       });
       setForm(result.day);
@@ -166,6 +167,17 @@ export function CurriculumDayDialog({
               rows={4}
               value={form.ai_guidance_prompt}
               onChange={(event) => setForm({ ...form, ai_guidance_prompt: event.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="day-evening-prompt">Evening check-in prompt</Label>
+            <Textarea
+              id="day-evening-prompt"
+              rows={3}
+              value={form.evening_prompt_text}
+              onChange={(event) => setForm({ ...form, evening_prompt_text: event.target.value })}
+              placeholder="Sent as the full SMS body for this day's evening check-in. Leave blank to use the generic fallback. Has no effect on WhatsApp, which always sends the approved evening check-in template."
             />
           </div>
 

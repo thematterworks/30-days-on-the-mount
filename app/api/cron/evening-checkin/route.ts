@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { env } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { sendTemplateMessage } from "@/lib/whatsapp";
-import { getEveningCheckinTemplateName } from "@/lib/system-config";
+import { sendPushToChannel } from "@/lib/messaging";
+import { getEveningCheckinFallbackText, getEveningCheckinTemplateName } from "@/lib/system-config";
 import { DEFAULT_PREFERRED_HOUR, DEFAULT_TIMEZONE, getLocalHour } from "@/lib/timezone";
 
 export const maxDuration = 300;
@@ -16,10 +16,20 @@ const EVENING_OFFSET_HOURS = 10;
  * daily-push. Invites active participants to reflect on whether they
  * completed the day's practice and process any friction. Unlike
  * daily-push, this does not advance current_day — it's a second touchpoint
- * on the same day, not progress. The webhook detects replies to this
- * template (by checking the participant's most recent outbound template)
- * and routes them through the pastoral-care evening persona instead of the
- * daily reflection AI.
+ * on the same day, not progress.
+ *
+ * Dispatch is channel-aware: WhatsApp participants get the generic
+ * Meta-approved evening_checkin_template_name template (a per-day template
+ * would require separate Meta approval for each day); Twilio SMS
+ * participants get the day's specific curriculum_days.evening_prompt_text
+ * sent directly, falling back to evening_checkin_fallback_text if that
+ * day's prompt is empty.
+ *
+ * Sets evening_sent_at and resets evening_completed to false on every send,
+ * which lib/conversation-engine.ts uses to recognize a participant's next
+ * freeform reply as responding to tonight's check-in (across both
+ * channels) instead of inferring it from the most recent outbound
+ * template body.
  *
  * Target hour is derived from preferred_delivery_hour rather than stored
  * separately, so it always stays 10 hours after whatever morning hour the
@@ -35,13 +45,14 @@ export async function GET(request: NextRequest) {
 
   const supabase = getSupabaseAdmin();
   const templateName = await getEveningCheckinTemplateName();
+  const genericFallbackText = await getEveningCheckinFallbackText();
 
   const { data: activeUsers, error } = await supabase
     .from("users")
     .select("*")
     .eq("status", "active")
     .gte("current_day", 0)
-    .lte("current_day", 30);
+    .lte("current_day", 31);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -67,19 +78,31 @@ export async function GET(request: NextRequest) {
 
     processed += 1;
 
-    const result = await sendTemplateMessage(user.phone_number, templateName);
+    const { data: curriculumDay } = await supabase
+      .from("curriculum_days")
+      .select("evening_prompt_text")
+      .eq("day_number", user.current_day)
+      .maybeSingle();
+
+    const smsBody = curriculumDay?.evening_prompt_text?.trim() || genericFallbackText;
+    const result = await sendPushToChannel(user.channel, user.phone_number, templateName, smsBody);
 
     await supabase.from("message_logs").insert({
       phone_number: user.phone_number,
       direction: "outbound",
       message_type: "template",
       message_body: `[template:${templateName}]`,
-      whatsapp_message_id: result.messageId,
+      provider_message_id: result.messageId,
       status: result.ok ? "sent" : "failed",
+      channel: user.channel,
     });
 
     if (result.ok) {
       succeeded += 1;
+      await supabase
+        .from("users")
+        .update({ evening_sent_at: now.toISOString(), evening_completed: false })
+        .eq("phone_number", user.phone_number);
     } else {
       failed += 1;
     }

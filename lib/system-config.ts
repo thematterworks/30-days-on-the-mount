@@ -36,6 +36,18 @@ export async function getEveningReflectionSystemPrompt(): Promise<string> {
   );
 }
 
+/**
+ * Generic SMS evening check-in body, used when the active day's
+ * curriculum_days.evening_prompt_text is empty. Not used for WhatsApp,
+ * which always sends the approved evening_checkin_template_name template.
+ */
+export async function getEveningCheckinFallbackText(): Promise<string> {
+  return getSystemConfigValue(
+    "evening_checkin_fallback_text",
+    "How did today's practice sit with you? Reply and let me know what came up.",
+  );
+}
+
 const EMAIL_THEME_KEY = "email_theme_v1";
 
 export const DEFAULT_EMAIL_THEME: EmailTheme = {

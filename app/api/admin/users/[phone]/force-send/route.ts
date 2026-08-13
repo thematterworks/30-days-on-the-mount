@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { sendTemplateMessage } from "@/lib/whatsapp";
+import { sendPushToChannel } from "@/lib/messaging";
 
 export async function POST(request: NextRequest, ctx: RouteContext<"/api/admin/users/[phone]/force-send">) {
   const { phone } = await ctx.params;
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/admin/u
 
   const { data: curriculumDay } = await supabase
     .from("curriculum_days")
-    .select("template_name")
+    .select("template_name, title, fallback_text")
     .eq("day_number", user.current_day)
     .maybeSingle();
 
@@ -28,15 +28,17 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/admin/u
     return NextResponse.json({ error: `No curriculum entry for day ${user.current_day}` }, { status: 404 });
   }
 
-  const result = await sendTemplateMessage(phoneNumber, curriculumDay.template_name);
+  const smsBody = `${curriculumDay.title}\n\n${curriculumDay.fallback_text}`;
+  const result = await sendPushToChannel(user.channel, phoneNumber, curriculumDay.template_name, smsBody);
 
   await supabase.from("message_logs").insert({
     phone_number: phoneNumber,
     direction: "outbound",
     message_type: "template",
     message_body: `[template:${curriculumDay.template_name}]`,
-    whatsapp_message_id: result.messageId,
+    provider_message_id: result.messageId,
     status: result.ok ? "sent" : "failed",
+    channel: user.channel,
   });
 
   if (!result.ok) {

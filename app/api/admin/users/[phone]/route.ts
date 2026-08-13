@@ -43,8 +43,8 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/admin/
     update.status = body.status;
   }
   if (body.current_day !== undefined) {
-    if (!Number.isInteger(body.current_day) || body.current_day < 0 || body.current_day > 30) {
-      return NextResponse.json({ error: "current_day must be an integer between 0 and 30" }, { status: 400 });
+    if (!Number.isInteger(body.current_day) || body.current_day < 0 || body.current_day > 31) {
+      return NextResponse.json({ error: "current_day must be an integer between 0 and 31" }, { status: 400 });
     }
     update.current_day = body.current_day;
   }

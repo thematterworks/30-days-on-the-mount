@@ -6,7 +6,7 @@ Admin dashboard and backend infrastructure for the "30 Days on the Mount" WhatsA
 
 - **Frontend:** Next.js, Tailwind CSS v4, shadcn/ui, Lucide icons
 - **Database:** Supabase (Postgres) with RLS enabled and no anon/authenticated policies — every query goes through the server-only service-role client
-- **Hosting:** Vercel Functions + Vercel Cron
+- **Hosting:** Vercel Functions. Scheduling is an external hourly pinger (not Vercel Cron — Hobby tier caps cron at once/day, which is incompatible with per-participant delivery-hour matching), hitting `/api/cron/daily-push` and `/api/cron/evening-checkin` with `Authorization: Bearer $CRON_SECRET`
 - **Messaging:** WhatsApp Cloud API (Meta Graph API v19.0)
 - **AI:** Anthropic Claude (`claude-opus-4-8`) via `@anthropic-ai/sdk`
 - **Admin auth:** single-operator email/password, HMAC-signed session cookie (no external auth provider)
@@ -50,7 +50,11 @@ Visit `/admin/login` to sign in to the dashboard.
 
 ### 5. Deploy
 
-Push to Vercel and set the same environment variables in the project settings. `vercel.json` wires both `daily-push` and `evening-checkin` to run hourly (`0 * * * *`), each matching a different per-participant target hour computed from `timezone`/`preferred_delivery_hour`. Vercel Cron sends `Authorization: Bearer $CRON_SECRET`, which both routes verify.
+Push to Vercel and set the same environment variables in the project settings. Scheduling is **not** in `vercel.json` — Vercel Hobby tier only allows cron to run once a day, which breaks per-participant delivery-hour matching (see the note on `/api/cron/daily-push` below). Instead, point an external scheduler (e.g. cron-job.org, a GitHub Actions scheduled workflow, EasyCron) at both routes, firing hourly, with header `Authorization: Bearer <CRON_SECRET>`:
+- `GET https://<your-domain>/api/cron/daily-push`
+- `GET https://<your-domain>/api/cron/evening-checkin`
+
+Both routes only check that Bearer header — they don't care who calls them, Vercel Cron or otherwise.
 
 ## Architecture notes
 

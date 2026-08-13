@@ -45,9 +45,9 @@ export async function GET() {
       .gte("created_at", thirtyHoursAgo),
   ]);
 
-  const dayDistribution = Array.from({ length: 31 }, (_, day) => ({ day, count: 0 }));
+  const dayDistribution = Array.from({ length: 32 }, (_, day) => ({ day, count: 0 }));
   for (const row of dayRows ?? []) {
-    if (row.current_day >= 0 && row.current_day <= 30) {
+    if (row.current_day >= 0 && row.current_day <= 31) {
       dayDistribution[row.current_day].count += 1;
     }
   }

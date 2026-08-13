@@ -6,6 +6,9 @@ type RequiredEnvVar =
   | "WHATSAPP_TOKEN"
   | "WHATSAPP_PHONE_NUMBER_ID"
   | "WHATSAPP_VERIFY_TOKEN"
+  | "TWILIO_ACCOUNT_SID"
+  | "TWILIO_AUTH_TOKEN"
+  | "TWILIO_PHONE_NUMBER"
   | "CRON_SECRET"
   | "ADMIN_EMAIL"
   | "ADMIN_PASSWORD_HASH"
@@ -51,6 +54,15 @@ export const env = {
   },
   get WHATSAPP_VERIFY_TOKEN() {
     return readEnv("WHATSAPP_VERIFY_TOKEN");
+  },
+  get TWILIO_ACCOUNT_SID() {
+    return readEnv("TWILIO_ACCOUNT_SID");
+  },
+  get TWILIO_AUTH_TOKEN() {
+    return readEnv("TWILIO_AUTH_TOKEN");
+  },
+  get TWILIO_PHONE_NUMBER() {
+    return readEnv("TWILIO_PHONE_NUMBER");
   },
   get AI_API_KEY() {
     return readAiApiKey();

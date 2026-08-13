@@ -8,6 +8,7 @@ interface UpdateBody {
   template_name?: string;
   fallback_text?: string;
   ai_guidance_prompt?: string;
+  evening_prompt_text?: string;
   media_url?: string | null;
 }
 
@@ -15,7 +16,7 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/admin/
   const { day } = await ctx.params;
   const dayNumber = Number(day);
 
-  if (!Number.isInteger(dayNumber) || dayNumber < 0 || dayNumber > 30) {
+  if (!Number.isInteger(dayNumber) || dayNumber < 0 || dayNumber > 31) {
     return NextResponse.json({ error: "Invalid day number" }, { status: 400 });
   }
 
@@ -25,7 +26,7 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/admin/
   }
 
   const update: Partial<CurriculumDayRow> = {};
-  for (const field of ["title", "template_name", "fallback_text", "ai_guidance_prompt"] as const) {
+  for (const field of ["title", "template_name", "fallback_text", "ai_guidance_prompt", "evening_prompt_text"] as const) {
     if (typeof body[field] === "string") {
       update[field] = body[field];
     }

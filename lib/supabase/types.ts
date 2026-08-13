@@ -17,6 +17,7 @@ export type OnboardingStep =
 export type MessageDirection = "inbound" | "outbound";
 export type MessageType = "template" | "freeform" | "ai_generated";
 export type MessageStatus = "sent" | "delivered" | "read" | "failed";
+export type MessageChannel = "whatsapp" | "sms";
 export type CommunityPostStatus = "pending" | "approved" | "flagged" | "deleted";
 export type BlogPostStatus = "draft" | "published";
 
@@ -35,6 +36,9 @@ export type UserRow = {
   wants_email: boolean;
   email_address: string | null;
   onboarding_step: OnboardingStep;
+  channel: MessageChannel;
+  evening_sent_at: string | null;
+  evening_completed: boolean;
 };
 
 export type MessageLogRow = {
@@ -43,9 +47,10 @@ export type MessageLogRow = {
   direction: MessageDirection;
   message_type: MessageType;
   message_body: string;
-  whatsapp_message_id: string | null;
+  provider_message_id: string | null;
   status: MessageStatus;
   created_at: string;
+  channel: MessageChannel;
 };
 
 export type CurriculumDayRow = {
@@ -55,6 +60,7 @@ export type CurriculumDayRow = {
   fallback_text: string;
   ai_guidance_prompt: string;
   media_url: string | null;
+  evening_prompt_text: string;
 };
 
 export type SystemConfigRow = {

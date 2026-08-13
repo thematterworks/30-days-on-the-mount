@@ -82,7 +82,7 @@ function CurriculumEditor() {
         ) : null}
 
         <div className="grid grid-cols-4 gap-3 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
-          {Array.from({ length: 31 }, (_, dayNumber) => dayNumber).map((dayNumber) => {
+          {Array.from({ length: 32 }, (_, dayNumber) => dayNumber).map((dayNumber) => {
             const dayData = days.find((d) => d.day_number === dayNumber);
             const populated = Boolean(dayData?.fallback_text.trim());
             return (

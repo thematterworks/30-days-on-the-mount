@@ -88,7 +88,7 @@ export function AnalyticsView() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Drop-off Distribution — Day 0 to 30</CardTitle>
+            <CardTitle className="text-base">Drop-off Distribution — Day 0 to 31</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex h-40 items-end gap-1">
@@ -104,8 +104,8 @@ export function AnalyticsView() {
             </div>
             <div className="mt-2 flex justify-between text-xs text-muted-foreground">
               <span>Day 0</span>
-              <span>Day 15</span>
-              <span>Day 30</span>
+              <span>Day 16</span>
+              <span>Day 31</span>
             </div>
           </CardContent>
         </Card>

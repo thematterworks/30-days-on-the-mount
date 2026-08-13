@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { env } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { sendTemplateMessage } from "@/lib/whatsapp";
+import { sendPushToChannel } from "@/lib/messaging";
 import { sendCurriculumEmail } from "@/lib/email";
 import { getEmailTheme } from "@/lib/system-config";
 import { DEFAULT_PREFERRED_HOUR, DEFAULT_TIMEZONE, getLocalHour } from "@/lib/timezone";
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     .select("*")
     .eq("status", "active")
     .gte("current_day", 0)
-    .lte("current_day", 30);
+    .lte("current_day", 31);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -75,22 +75,24 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
 
     if (!curriculumDay) {
-      // curriculum_days is keyed 0-30 — no row for nextDay means the
-      // participant just finished the last delivered day (30).
+      // curriculum_days is keyed 0-31 — no row for nextDay means the
+      // participant just finished the last delivered day (31).
       await supabase.from("users").update({ status: "completed" }).eq("phone_number", user.phone_number);
       completed += 1;
       continue;
     }
 
-    const result = await sendTemplateMessage(user.phone_number, curriculumDay.template_name);
+    const smsBody = `${curriculumDay.title}\n\n${curriculumDay.fallback_text}`;
+    const result = await sendPushToChannel(user.channel, user.phone_number, curriculumDay.template_name, smsBody);
 
     await supabase.from("message_logs").insert({
       phone_number: user.phone_number,
       direction: "outbound",
       message_type: "template",
       message_body: `[template:${curriculumDay.template_name}]`,
-      whatsapp_message_id: result.messageId,
+      provider_message_id: result.messageId,
       status: result.ok ? "sent" : "failed",
+      channel: user.channel,
     });
 
     if (!result.ok) {
@@ -99,7 +101,16 @@ export async function GET(request: NextRequest) {
     }
 
     succeeded += 1;
-    await supabase.from("users").update({ current_day: nextDay }).eq("phone_number", user.phone_number);
+    // evening_completed: true closes out any unanswered evening check-in
+    // from the previous day now that a new day's curriculum has gone out —
+    // otherwise a stale evening_sent_at/evening_completed=false pair would
+    // cause this participant's next reply (to today's new content) to be
+    // misrouted through the evening pastoral-care persona instead of the
+    // normal daily reflection AI.
+    await supabase
+      .from("users")
+      .update({ current_day: nextDay, evening_completed: true })
+      .eq("phone_number", user.phone_number);
 
     if (user.wants_email && user.email_address) {
       const emailResult = await sendCurriculumEmail({

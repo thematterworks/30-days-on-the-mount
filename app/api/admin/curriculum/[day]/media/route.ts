@@ -23,7 +23,7 @@ function safeExtension(filename: string): string {
 async function getDayNumber(ctx: RouteContext<"/api/admin/curriculum/[day]/media">) {
   const { day } = await ctx.params;
   const dayNumber = Number(day);
-  if (!Number.isInteger(dayNumber) || dayNumber < 0 || dayNumber > 30) return null;
+  if (!Number.isInteger(dayNumber) || dayNumber < 0 || dayNumber > 31) return null;
   return dayNumber;
 }
 

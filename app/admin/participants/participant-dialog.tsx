@@ -75,13 +75,13 @@ export function ParticipantDialog({
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="current-day">Current day (0-30)</Label>
+            <Label htmlFor="current-day">Current day (0-31)</Label>
             <div className="flex gap-2">
               <Input
                 id="current-day"
                 type="number"
                 min={0}
-                max={30}
+                max={31}
                 value={currentDay}
                 onChange={(event) => setCurrentDay(event.target.value)}
               />
