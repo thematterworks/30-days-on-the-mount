@@ -18,6 +18,7 @@ export type MessageDirection = "inbound" | "outbound";
 export type MessageType = "template" | "freeform" | "ai_generated";
 export type MessageStatus = "sent" | "delivered" | "read" | "failed";
 export type MessageChannel = "whatsapp" | "sms";
+export type AccessTier = "free" | "premium";
 export type CommunityPostStatus = "pending" | "approved" | "flagged" | "deleted";
 export type BlogPostStatus = "draft" | "published";
 
@@ -39,6 +40,17 @@ export type UserRow = {
   channel: MessageChannel;
   evening_sent_at: string | null;
   evening_completed: boolean;
+  access_tier: AccessTier;
+  premium_granted_at: string | null;
+};
+
+export type MagicLinkRow = {
+  id: string;
+  phone_number: string;
+  token_hash: string;
+  expires_at: string;
+  consumed_at: string | null;
+  created_at: string;
 };
 
 export type MessageLogRow = {
@@ -61,6 +73,13 @@ export type CurriculumDayRow = {
   ai_guidance_prompt: string;
   media_url: string | null;
   evening_prompt_text: string;
+  hook_text: string;
+  scripture_reference: string;
+  scripture_text: string;
+  scripture_audio_url: string;
+  teaching_video_url: string;
+  exegesis_text: string;
+  surrender_text: string;
 };
 
 export type SystemConfigRow = {
@@ -78,6 +97,16 @@ export type CommunityPostRow = {
   status: CommunityPostStatus;
   moderated_at: string | null;
   moderated_by: string | null;
+  created_at: string;
+};
+
+export type CommunityReflectionRow = {
+  id: string;
+  day_number: number;
+  phone_number: string;
+  display_name: string;
+  reflection_text: string;
+  is_approved: boolean;
   created_at: string;
 };
 
@@ -113,6 +142,12 @@ export type Database = {
         Update: Partial<MessageLogRow>;
         Relationships: [];
       };
+      magic_links: {
+        Row: MagicLinkRow;
+        Insert: Partial<MagicLinkRow> & { phone_number: string; token_hash: string; expires_at: string };
+        Update: Partial<MagicLinkRow>;
+        Relationships: [];
+      };
       curriculum_days: {
         Row: CurriculumDayRow;
         Insert: Partial<CurriculumDayRow> & { day_number: number; title: string; template_name: string };
@@ -129,6 +164,16 @@ export type Database = {
         Row: CommunityPostRow;
         Insert: Partial<CommunityPostRow> & { phone_number: string; content: string };
         Update: Partial<CommunityPostRow>;
+        Relationships: [];
+      };
+      community_reflections: {
+        Row: CommunityReflectionRow;
+        Insert: Partial<CommunityReflectionRow> & {
+          day_number: number;
+          phone_number: string;
+          reflection_text: string;
+        };
+        Update: Partial<CommunityReflectionRow>;
         Relationships: [];
       };
       blog_posts: {

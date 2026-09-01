@@ -1,7 +1,14 @@
 import "server-only";
 
-/** Backfilled onto every pre-existing active user by migration 0005 — used defensively as a fallback here too. */
-export const DEFAULT_PREFERRED_HOUR = 7;
+/**
+ * Fallback delivery hour for any participant whose preferred_delivery_hour is
+ * null. That is now the common case, not the exception: the frictionless
+ * MOUNTAIN/START opt-in activates people immediately and never asks for a
+ * time, so this constant — not a stored per-user value — is what actually
+ * sets delivery time for most participants. Migration 0014 aligns the rows
+ * that migration 0005 backfilled to 7 with this value.
+ */
+export const DEFAULT_PREFERRED_HOUR = 8;
 export const DEFAULT_TIMEZONE = "America/Los_Angeles";
 
 /** Current local hour (0-23) in an IANA timezone, or null if the timezone string is invalid. */

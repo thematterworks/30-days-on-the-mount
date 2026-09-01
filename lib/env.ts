@@ -12,7 +12,8 @@ type RequiredEnvVar =
   | "CRON_SECRET"
   | "ADMIN_EMAIL"
   | "ADMIN_PASSWORD_HASH"
-  | "ADMIN_SESSION_SECRET";
+  | "ADMIN_SESSION_SECRET"
+  | "PARTICIPANT_SESSION_SECRET";
 
 function readEnv(name: RequiredEnvVar): string {
   // .trim() guards against the common copy/paste gotcha of a trailing
@@ -78,5 +79,8 @@ export const env = {
   },
   get ADMIN_SESSION_SECRET() {
     return readEnv("ADMIN_SESSION_SECRET");
+  },
+  get PARTICIPANT_SESSION_SECRET() {
+    return readEnv("PARTICIPANT_SESSION_SECRET");
   },
 };

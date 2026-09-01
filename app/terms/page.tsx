@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Terms and Conditions — 30 Days on the Mount",
-  description: "Terms governing the 30 Days on the Mount SMS/WhatsApp messaging program.",
+  description: "Terms governing the 30 Days on the Mount SMS messaging program.",
 };
 
 const EFFECTIVE_DATE = "August 12, 2026";
@@ -24,26 +24,53 @@ export default function TermsPage() {
 
         <h2>The Program</h2>
         <p>
-          The Program delivers a 30-day series of daily text messages by SMS and/or WhatsApp, consisting of
+          The Program delivers a 30-day series of daily text messages by SMS, consisting of
           scriptural reflections drawn from the Sermon on the Mount, a daily invitation and practice, and
           interactive check-ins. You may reply to any message to ask a question, share a reflection, or receive the
           full text of that day&apos;s teaching. Message frequency varies — typically one to two messages per day
           during active participation — and depends on your own replies and preferences.
         </p>
 
-        <h2>Eligibility and Opt-In</h2>
-        <p>You may join the Program in either of the following ways:</p>
+        <h2>SMS Communications</h2>
         <ul>
           <li>
-            <strong>Web form.</strong> By submitting your phone number through our website and confirming your
-            intent to join.
+            <strong>Program Description:</strong> 30 Days on the Mount provides daily reflection links and
+            interactive coaching via SMS.
           </li>
           <li>
-            <strong>Text keyword.</strong> By messaging our number directly and confirming, in your own words or by
-            tapping a preset option, that you would like to begin. New contacts are placed in a waiting room and are
-            not enrolled in daily messages until this confirmation step is complete.
+            <strong>Message Frequency:</strong> Message frequency varies.
+          </li>
+          <li>
+            <strong>Pricing:</strong> Message and data rates may apply.
+          </li>
+          <li>
+            <strong>Opt-Out:</strong> You can cancel the SMS service at any time. Just text &quot;STOP&quot; to +1
+            (323) 747-7471. After you send the SMS message &quot;STOP&quot; to us, we will send you an SMS message to
+            confirm that you have been unsubscribed. After this, you will no longer receive SMS messages from us. If
+            you want to join again, just sign up as you did the first time.
+          </li>
+          <li>
+            <strong>Help:</strong> If you are experiencing issues with the messaging program you can reply with the
+            keyword &quot;HELP&quot; for more assistance, or you can get help directly at{" "}
+            <a href="mailto:30daysonthemount@gmail.com">30daysonthemount@gmail.com</a>.
+          </li>
+          <li>
+            <strong>Carrier Liability:</strong> Carriers are not liable for delayed or undelivered messages.
+          </li>
+          <li>
+            <strong>Consent:</strong> By texting a keyword to opt in, you give your express consent to receive
+            recurring automated text messages from 30 Days on the Mount. Consent to receive text messages is not a
+            condition of purchasing any goods or services. The Program is free to join.
           </li>
         </ul>
+
+        <h2>Eligibility and Opt-In</h2>
+        <p>
+          You join the Program by sending a text-message keyword — <strong>START</strong> or{" "}
+          <strong>MOUNTAIN</strong> — to +1 (323) 747-7471. There is no web form and no purchase; texting the
+          keyword is your affirmative, express consent to receive recurring automated messages, and that consent is
+          not a condition of any purchase.
+        </p>
         <p>
           You must be at least 18 years old, or have the consent of a parent or legal guardian, and be the account
           holder or have the account holder&apos;s permission for the mobile number you provide, to join the

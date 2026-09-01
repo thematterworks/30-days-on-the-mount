@@ -77,6 +77,41 @@ export async function generateReflectionReply(input: ReflectionReplyInput): Prom
   return text ?? "Thank you for sharing that. I'm here with you — feel free to say more whenever you're ready.";
 }
 
+export interface CuriousInspectorInput {
+  personaSystemPrompt: string;
+  dayNumber: number;
+  dayTitle: string;
+  dayAiGuidancePrompt: string;
+  reflection: string;
+}
+
+/**
+ * The Curious Inspector (GuidedStory Screen 4). Unlike generateReflectionReply
+ * — which offers a warm, complete pastoral reply for the text track — this
+ * returns exactly ONE piercing, non-accusatory question that turns the
+ * participant back toward their own resistance. It deliberately does not
+ * affirm, summarize, advise, or answer: in the PWA the question replaces the
+ * input, so anything more than a single question would break the "one thing
+ * at a time" sanctuary UX.
+ */
+export async function generateCuriousInspectorQuestion(input: CuriousInspectorInput): Promise<string> {
+  const system = [
+    input.personaSystemPrompt,
+    "You are acting as the Curious Inspector during a daily guided reflection. " +
+      "Read the participant's written reflection and respond with EXACTLY ONE short, piercing, non-accusatory " +
+      "question that invites them to look more honestly at their own resistance, avoidance, or the story they " +
+      "are telling themselves. Do not affirm, summarize, praise, advise, reassure, or answer. Do not add any " +
+      "preamble or closing. Output only the single question, and nothing else.",
+    `The participant is on Day ${input.dayNumber}: "${input.dayTitle}".`,
+    input.dayAiGuidancePrompt ? `Guidance specific to this day: ${input.dayAiGuidancePrompt}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  const text = await callClaude(system, input.reflection, 200);
+  return text ?? "What are you not letting yourself say about this yet?";
+}
+
 /**
  * The exact string the Gatekeeper is instructed to reply with — and only
  * with — when it judges the participant ready to begin. The webhook

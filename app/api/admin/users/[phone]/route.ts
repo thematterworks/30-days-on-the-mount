@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import type { OnboardingStep, UserRow, UserStatus } from "@/lib/supabase/types";
+import type { AccessTier, OnboardingStep, UserRow, UserStatus } from "@/lib/supabase/types";
 
 const VALID_STATUSES: UserStatus[] = ["active", "paused", "completed", "opted_out"];
 const VALID_ONBOARDING_STEPS: OnboardingStep[] = [
@@ -12,6 +12,8 @@ const VALID_ONBOARDING_STEPS: OnboardingStep[] = [
   "awaiting_email_address",
   "completed",
 ];
+
+const VALID_ACCESS_TIERS: AccessTier[] = ["free", "premium"];
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -24,6 +26,7 @@ interface UpdateBody {
   first_name?: string | null;
   preferred_delivery_hour?: number | null;
   email_address?: string | null;
+  access_tier?: AccessTier;
 }
 
 export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/admin/users/[phone]">) {
@@ -82,6 +85,15 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/admin/
       return NextResponse.json({ error: "email_address is not a valid email address" }, { status: 400 });
     }
     update.email_address = body.email_address;
+  }
+  if (body.access_tier !== undefined) {
+    if (!VALID_ACCESS_TIERS.includes(body.access_tier)) {
+      return NextResponse.json({ error: "Invalid access_tier" }, { status: 400 });
+    }
+    update.access_tier = body.access_tier;
+    // Stamp the grant time on upgrade; clear it on downgrade so
+    // premium_granted_at always reflects the current grant, not a stale one.
+    update.premium_granted_at = body.access_tier === "premium" ? new Date().toISOString() : null;
   }
 
   if (Object.keys(update).length === 0) {

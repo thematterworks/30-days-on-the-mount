@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { env } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { sendPushToChannel } from "@/lib/messaging";
+import { isUnsubscribedRecipientError, sendPushToChannel } from "@/lib/messaging";
 import { getEveningCheckinFallbackText, getEveningCheckinTemplateName } from "@/lib/system-config";
 import { DEFAULT_PREFERRED_HOUR, DEFAULT_TIMEZONE, getLocalHour } from "@/lib/timezone";
 
 export const maxDuration = 300;
 
-/** Hours between a participant's morning delivery and their evening check-in. */
-const EVENING_OFFSET_HOURS = 10;
+/**
+ * Hours between a participant's morning delivery and their evening check-in.
+ * 11 puts the evening touchpoint at 19:00 for the default 08:00 morning hour.
+ */
+const EVENING_OFFSET_HOURS = 11;
 
 /**
  * Evening check-in: runs hourly (see vercel.json), same shape as
@@ -32,10 +35,10 @@ const EVENING_OFFSET_HOURS = 10;
  * template body.
  *
  * Target hour is derived from preferred_delivery_hour rather than stored
- * separately, so it always stays 10 hours after whatever morning hour the
- * participant chose (e.g. 07:00 morning -> 17:00 evening), including
- * wrapping past midnight for anyone whose morning hour is late (e.g. 15:00
- * morning -> 01:00 evening, via modulo).
+ * separately, so it always stays EVENING_OFFSET_HOURS after whatever morning
+ * hour applies to the participant (e.g. the default 08:00 morning -> 19:00
+ * evening), including wrapping past midnight for anyone whose morning hour is
+ * late (e.g. 15:00 morning -> 02:00 evening, via modulo).
  */
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -64,6 +67,7 @@ export async function GET(request: NextRequest) {
   let processed = 0;
   let succeeded = 0;
   let failed = 0;
+  let autoOptedOut = 0;
 
   for (const user of activeUsers ?? []) {
     eligible += 1;
@@ -105,8 +109,14 @@ export async function GET(request: NextRequest) {
         .eq("phone_number", user.phone_number);
     } else {
       failed += 1;
+      // Same reconciliation as daily-push: a 21610 means Twilio's Advanced
+      // Opt-Out already suppressed this number on a STOP we never received.
+      if (isUnsubscribedRecipientError(result)) {
+        await supabase.from("users").update({ status: "opted_out" }).eq("phone_number", user.phone_number);
+        autoOptedOut += 1;
+      }
     }
   }
 
-  return NextResponse.json({ eligible, processed, succeeded, failed });
+  return NextResponse.json({ eligible, processed, succeeded, failed, autoOptedOut });
 }

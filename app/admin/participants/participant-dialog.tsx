@@ -141,6 +141,30 @@ export function ParticipantDialog({
             </div>
           </div>
 
+          <div className="space-y-2 rounded-md border border-border p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Access tier</p>
+                <p className="mt-1 flex items-center gap-2 text-sm">
+                  <Badge variant={user.access_tier === "premium" ? "default" : "outline"}>{user.access_tier}</Badge>
+                  <span className="text-muted-foreground">
+                    {user.access_tier === "premium" ? "Has the /journey PWA" : "Free text-only track"}
+                  </span>
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant={user.access_tier === "premium" ? "outline" : "default"}
+                disabled={busy}
+                onClick={() =>
+                  run(() => patch({ access_tier: user.access_tier === "premium" ? "free" : "premium" }))
+                }
+              >
+                {user.access_tier === "premium" ? "Downgrade to free" : "Grant premium"}
+              </Button>
+            </div>
+          </div>
+
           <div className="space-y-3 rounded-md border border-border p-3">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Onboarding &amp; Preferences

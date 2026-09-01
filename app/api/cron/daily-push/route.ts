@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { env } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { sendPushToChannel } from "@/lib/messaging";
+import { isUnsubscribedRecipientError, sendPushToChannel } from "@/lib/messaging";
 import { sendCurriculumEmail } from "@/lib/email";
 import { getEmailTheme } from "@/lib/system-config";
+import { cleanupExpiredMagicLinks, mintMagicLink } from "@/lib/participant-auth";
 import { DEFAULT_PREFERRED_HOUR, DEFAULT_TIMEZONE, getLocalHour } from "@/lib/timezone";
 
 export const maxDuration = 300;
@@ -47,14 +48,20 @@ export async function GET(request: NextRequest) {
   // for every recipient, so there's no reason to re-fetch it per send.
   const emailTheme = await getEmailTheme();
 
+  // Housekeeping: prune long-expired magic links once per run (cheap, and
+  // daily-push runs hourly regardless of whether anyone is due).
+  await cleanupExpiredMagicLinks();
+
   let eligible = 0;
   let processed = 0;
   let succeeded = 0;
   let failed = 0;
   let completed = 0;
+  let autoOptedOut = 0;
   let emailsSent = 0;
   let emailsFailed = 0;
   let emailsSkipped = 0;
+  let linksAppended = 0;
 
   for (const user of activeUsers ?? []) {
     eligible += 1;
@@ -82,7 +89,22 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
-    const smsBody = `${curriculumDay.title}\n\n${curriculumDay.fallback_text}`;
+    let smsBody = `${curriculumDay.title}\n\n${curriculumDay.fallback_text}`;
+
+    // Every daily SMS carries a fresh /journey magic link (a persistent
+    // 30-day key, per lib/participant-auth.ts). Access is universal-premium
+    // now, so there's no tier gate — just the channel: an inline link works
+    // in a free-text SMS body. (WhatsApp is retired; if a legacy whatsapp
+    // row exists, its fixed template can't carry an arbitrary URL, so it's
+    // skipped rather than failing.)
+    if (user.channel === "sms") {
+      const link = await mintMagicLink(user.phone_number);
+      if (link) {
+        smsBody += `\n\nStep into today in the app: ${link.url}`;
+        linksAppended += 1;
+      }
+    }
+
     const result = await sendPushToChannel(user.channel, user.phone_number, curriculumDay.template_name, smsBody);
 
     await supabase.from("message_logs").insert({
@@ -97,6 +119,13 @@ export async function GET(request: NextRequest) {
 
     if (!result.ok) {
       failed += 1;
+      // Twilio already knows this participant opted out even though our
+      // webhook never saw their STOP — reconcile instead of retrying them
+      // (and re-sending to an opted-out recipient) on every run from here on.
+      if (isUnsubscribedRecipientError(result)) {
+        await supabase.from("users").update({ status: "opted_out" }).eq("phone_number", user.phone_number);
+        autoOptedOut += 1;
+      }
       continue;
     }
 
@@ -135,8 +164,10 @@ export async function GET(request: NextRequest) {
     succeeded,
     failed,
     completed,
+    autoOptedOut,
     emailsSent,
     emailsFailed,
     emailsSkipped,
+    linksAppended,
   });
 }

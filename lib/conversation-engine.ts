@@ -41,7 +41,19 @@ const ACTIVATION_TRIGGER_TEXT = "Let's begin the Challenge.";
  * action, so it must actually work.
  */
 function isActivationTrigger(text: string): boolean {
-  return text === ACTIVATION_TRIGGER_TEXT || text.trim().toUpperCase() === "START";
+  return text === ACTIVATION_TRIGGER_TEXT;
+}
+
+/**
+ * Primary SMS opt-in keywords (case-insensitive, trimmed). Texting either
+ * one registers the participant immediately on Day 0 — active, premium — and
+ * fires the Day 0 welcome, with no conversational onboarding in between. This
+ * is the frictionless A2P opt-in the public CTA points at.
+ */
+const OPT_IN_KEYWORDS = new Set(["MOUNTAIN", "START"]);
+
+function isOptInKeyword(text: string): boolean {
+  return OPT_IN_KEYWORDS.has(text.trim().toUpperCase());
 }
 
 /**
@@ -96,6 +108,7 @@ export async function handleInboundMessage(params: {
         current_day: -1,
         last_interaction_at: new Date().toISOString(),
         channel,
+        access_tier: "premium", // universal premium — everyone gets /journey
       })
       .select()
       .single();
@@ -145,7 +158,34 @@ export async function handleInboundMessage(params: {
     return;
   }
 
+  // Primary opt-in: MOUNTAIN / START activate immediately on Day 0 (active,
+  // premium) and fire the Day 0 welcome — no conversational onboarding.
+  // Checked before the switchboard so it works from any status.
+  if (isOptInKeyword(text)) {
+    await handleOptIn(supabase, user);
+    return;
+  }
+
   await runSwitchboard(supabase, user, text);
+}
+
+/**
+ * Frictionless opt-in: a participant who isn't already active is registered
+ * on Day 0 (active + premium) and immediately sent the Day 0 welcome. An
+ * already-active participant is simply re-oriented, so re-texting the keyword
+ * never resets their progress.
+ */
+async function handleOptIn(supabase: Supabase, user: UserRow): Promise<void> {
+  if (user.status === "active") {
+    await sendAndLog(
+      supabase,
+      user,
+      "freeform",
+      `You're already on the mountain — Day ${user.current_day}. Reply anytime to reflect.`,
+    );
+    return;
+  }
+  await completeOnboardingAndActivate(supabase, user);
 }
 
 /** Unsubscribes a participant: updates status, and confirms via a direct reply — no AI involved. */
@@ -163,7 +203,11 @@ async function handleOptOut(supabase: Supabase, user: Pick<UserRow, "phone_numbe
 async function runSwitchboard(supabase: Supabase, user: UserRow, text: string) {
   // 1. Static ice-breaker intercepts — exact match, before any AI call,
   // available at any point in the conversation (including mid-onboarding).
-  const staticReply = ICE_BREAKER_RESPONSES[text];
+  // Object.hasOwn, not a bare index: `text` is raw inbound SMS, so a
+  // participant texting "constructor" / "toString" / "valueOf" would
+  // otherwise pull a function off Object.prototype, pass the truthy check,
+  // and get that function stringified back to them as the reply body.
+  const staticReply = Object.hasOwn(ICE_BREAKER_RESPONSES, text) ? ICE_BREAKER_RESPONSES[text] : undefined;
   if (staticReply) {
     await sendAndLog(supabase, user, "freeform", staticReply);
     return;
@@ -402,7 +446,13 @@ async function beginOnboarding(supabase: Supabase, user: UserRow): Promise<void>
 async function completeOnboardingAndActivate(supabase: Supabase, user: UserRow): Promise<void> {
   await supabase
     .from("users")
-    .update({ status: "active", current_day: 0, onboarding_step: "completed" })
+    .update({
+      status: "active",
+      current_day: 0,
+      onboarding_step: "completed",
+      access_tier: "premium",
+      premium_granted_at: new Date().toISOString(),
+    })
     .eq("phone_number", user.phone_number);
 
   const { data: welcomeDay } = await supabase
@@ -412,9 +462,15 @@ async function completeOnboardingAndActivate(supabase: Supabase, user: UserRow):
     .maybeSingle();
 
   const templateName = welcomeDay?.template_name ?? "day_00_welcome";
-  const smsBody = welcomeDay
+  // A2P 10DLC: the opt-in confirmation (first message) must carry the
+  // program disclosures. Appended at send time only — the stored curriculum
+  // welcome content is left untouched.
+  const complianceFooter =
+    "30 Days on the Mount is operated by The Matterworks LLC. Msg frequency varies. Msg&data rates may apply. Reply HELP for help, STOP to cancel.";
+  const welcomeText = welcomeDay
     ? `${welcomeDay.title}\n\n${welcomeDay.fallback_text}`
     : "Welcome to 30 Days on the Mount.";
+  const smsBody = `${welcomeText}\n\n${complianceFooter}`;
   const result = await sendPushToChannel(user.channel, user.phone_number, templateName, smsBody);
 
   await logMessage(supabase, {

@@ -1,0 +1,22 @@
+/* Journey-specific base styles for the /journey PWA. Plain CSS, imported
+   only by app/journey/layout.tsx — the Zoe color/font tokens themselves
+   live in globals.css @theme so Tailwind generates utilities from them. */
+
+.journey-root {
+  /* Full mobile viewport, quiet by default. The vertical snap-scroll and
+     tap surfaces live in the components; this just sets the stage. */
+  min-height: 100dvh;
+  background: linear-gradient(to bottom, var(--color-zoe-dusk), var(--color-zoe-deep));
+  color: var(--color-zoe-ink);
+  font-family: var(--font-sans);
+  overscroll-behavior: none; /* no rubber-band bounce past the first/last day */
+}
+
+/* The snap-scroll container hides its scrollbar — a sanctuary has no
+   progress bar screaming at you; the card scale/opacity conveys position. */
+.journey-scroll {
+  scrollbar-width: none;
+}
+.journey-scroll::-webkit-scrollbar {
+  display: none;
+}
