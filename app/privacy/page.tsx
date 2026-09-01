@@ -16,19 +16,31 @@ export default function PrivacyPolicyPage() {
 
         <p>
           <strong>The Matterworks LLC</strong> (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;), doing
-          business as 30 Days on the Mount, offers a 30-day guided reflection practice delivered by WhatsApp and SMS
-          text message, and optionally by email, that participants join voluntarily. This policy explains what
+          business as 30 Days on the Mount, offers a 30-day guided reflection practice delivered by SMS text
+          message, and optionally by email, that participants join voluntarily. This policy explains what
           information we collect when you use the service, why we collect it, who we share it with, and the choices
-          available to you. It applies to everyone who messages our WhatsApp or SMS number or otherwise participates
-          in the practice.
+          available to you. It applies to everyone who messages our SMS number or otherwise participates in the
+          practice.
+        </p>
+
+        <h2>SMS/Mobile Data</h2>
+        <p>
+          No mobile information will be shared with third parties or affiliates for marketing or promotional
+          purposes. All other use case categories exclude text messaging originator opt-in data and consent; this
+          information will not be shared with any third parties.
+        </p>
+        <p>
+          You opt in to text messages voluntarily by texting a keyword (START or MOUNTAIN) to our number. Consent to
+          receive text messages is not a condition of purchasing any goods or services, and you may opt out at any
+          time by replying STOP.
         </p>
 
         <h2>Information We Collect</h2>
         <p>We collect only what is needed to run the practice and communicate with you:</p>
         <ul>
           <li>
-            <strong>Phone number.</strong> Provided automatically when you message us on WhatsApp. This is how we
-            identify your account and deliver daily messages.
+            <strong>Phone number.</strong> Provided when you text us to join. This is how we identify your account
+            and deliver daily messages.
           </li>
           <li>
             <strong>First name (optional).</strong> Collected during onboarding so we can address you personally.
@@ -94,12 +106,8 @@ export default function PrivacyPolicyPage() {
             history, on Supabase&apos;s managed PostgreSQL infrastructure.
           </li>
           <li>
-            <strong>Meta / WhatsApp Business Platform</strong> — delivers and receives the WhatsApp messages that
-            make up the practice. Your use of WhatsApp is also subject to{" "}
-            <a href="https://www.whatsapp.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer">
-              WhatsApp&apos;s own Privacy Policy
-            </a>
-            .
+            <strong>Twilio</strong> — delivers and receives the SMS text messages that make up the practice, on our
+            behalf. Mobile opt-in data and consent are never shared for marketing or promotional purposes.
           </li>
           <li>
             <strong>Resend</strong> — delivers the optional daily email, for participants who opt in.

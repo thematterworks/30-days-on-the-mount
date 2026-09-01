@@ -56,6 +56,13 @@ export function CurriculumDayDialog({
           fallback_text: form.fallback_text,
           ai_guidance_prompt: form.ai_guidance_prompt,
           evening_prompt_text: form.evening_prompt_text,
+          hook_text: form.hook_text,
+          scripture_reference: form.scripture_reference,
+          scripture_text: form.scripture_text,
+          scripture_audio_url: form.scripture_audio_url,
+          teaching_video_url: form.teaching_video_url,
+          exegesis_text: form.exegesis_text,
+          surrender_text: form.surrender_text,
         }),
       });
       setForm(result.day);
@@ -179,6 +186,86 @@ export function CurriculumDayDialog({
               onChange={(event) => setForm({ ...form, evening_prompt_text: event.target.value })}
               placeholder="Sent as the full SMS body for this day's evening check-in. Leave blank to use the generic fallback. Has no effect on WhatsApp, which always sends the approved evening check-in template."
             />
+          </div>
+
+          <div className="space-y-4 rounded-md border border-border p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Guided Story (premium PWA)
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Powers the 5-screen /journey experience. Blank fields fall back gracefully in the app.
+            </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="day-hook">1 · Hook / invitation</Label>
+              <Textarea
+                id="day-hook"
+                rows={2}
+                value={form.hook_text}
+                onChange={(event) => setForm({ ...form, hook_text: event.target.value })}
+                placeholder="The single provocative question or disruptive action. Falls back to the title if blank."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="day-scripture-ref">2 · Scripture reference</Label>
+              <Input
+                id="day-scripture-ref"
+                value={form.scripture_reference}
+                onChange={(event) => setForm({ ...form, scripture_reference: event.target.value })}
+                placeholder="e.g. Matthew 5:3"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="day-scripture-text">2 · Scripture text</Label>
+              <Textarea
+                id="day-scripture-text"
+                rows={3}
+                value={form.scripture_text}
+                onChange={(event) => setForm({ ...form, scripture_text: event.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="day-scripture-audio">2 · Scripture audio URL (optional)</Label>
+              <Input
+                id="day-scripture-audio"
+                value={form.scripture_audio_url}
+                onChange={(event) => setForm({ ...form, scripture_audio_url: event.target.value })}
+                placeholder="https://…  (Lectio Divina / meditative audio)"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="day-teaching-video">3 · Teaching video URL (vertical 9:16)</Label>
+              <Input
+                id="day-teaching-video"
+                value={form.teaching_video_url}
+                onChange={(event) => setForm({ ...form, teaching_video_url: event.target.value })}
+                placeholder="https://…  (full-bleed teaching video slide)"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="day-exegesis">4 · Exegesis (Bios vs. Zoe)</Label>
+              <Textarea
+                id="day-exegesis"
+                rows={6}
+                value={form.exegesis_text}
+                onChange={(event) => setForm({ ...form, exegesis_text: event.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="day-surrender">6 · Surrender (closing prayer / release)</Label>
+              <Textarea
+                id="day-surrender"
+                rows={3}
+                value={form.surrender_text}
+                onChange={(event) => setForm({ ...form, surrender_text: event.target.value })}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

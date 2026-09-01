@@ -9,6 +9,13 @@ interface UpdateBody {
   fallback_text?: string;
   ai_guidance_prompt?: string;
   evening_prompt_text?: string;
+  hook_text?: string;
+  scripture_reference?: string;
+  scripture_text?: string;
+  scripture_audio_url?: string;
+  teaching_video_url?: string;
+  exegesis_text?: string;
+  surrender_text?: string;
   media_url?: string | null;
 }
 
@@ -26,7 +33,20 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/admin/
   }
 
   const update: Partial<CurriculumDayRow> = {};
-  for (const field of ["title", "template_name", "fallback_text", "ai_guidance_prompt", "evening_prompt_text"] as const) {
+  for (const field of [
+    "title",
+    "template_name",
+    "fallback_text",
+    "ai_guidance_prompt",
+    "evening_prompt_text",
+    "hook_text",
+    "scripture_reference",
+    "scripture_text",
+    "scripture_audio_url",
+    "teaching_video_url",
+    "exegesis_text",
+    "surrender_text",
+  ] as const) {
     if (typeof body[field] === "string") {
       update[field] = body[field];
     }

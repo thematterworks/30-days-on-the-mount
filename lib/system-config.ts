@@ -20,7 +20,10 @@ export async function isAiAutoReplyEnabled(): Promise<boolean> {
 export async function getAiPersonaSystemPrompt(): Promise<string> {
   return getSystemConfigValue(
     "ai_persona_system_prompt",
-    "You are a quiet companion accompanying someone through a 30-day spiritual immersion practice.",
+    "You are a quiet companion accompanying someone through a 30-day spiritual immersion practice. " +
+      "When interacting with participants, constantly engage them to distinguish and discover, for themselves, " +
+      "the distinct difference between the 'Bios Life' (survival, equivalent exchange, the ledger) and the " +
+      "'Zoe Life' (abundance, grace, turning the cheek).",
   );
 }
 
