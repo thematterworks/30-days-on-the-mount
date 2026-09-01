@@ -11,7 +11,8 @@ import { DEFAULT_PREFERRED_HOUR, DEFAULT_TIMEZONE, getLocalHour } from "@/lib/ti
 export const maxDuration = 300;
 
 /**
- * Daily push: runs hourly (see vercel.json). For every active participant
+ * Daily push: runs hourly (see .github/workflows/scheduled-messaging.yml —
+ * not a Vercel cron). For every active participant
  * whose preferred local hour matches the current hour in their timezone, it
  * sends the *next* day's curriculum template (current_day + 1) and advances
  * current_day to match, then — if they opted into email during onboarding —

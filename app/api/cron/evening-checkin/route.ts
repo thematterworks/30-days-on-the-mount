@@ -15,7 +15,8 @@ export const maxDuration = 300;
 const EVENING_OFFSET_HOURS = 11;
 
 /**
- * Evening check-in: runs hourly (see vercel.json), same shape as
+ * Evening check-in: runs hourly (see
+ * .github/workflows/scheduled-messaging.yml — not a Vercel cron), same shape as
  * daily-push. Invites active participants to reflect on whether they
  * completed the day's practice and process any friction. Unlike
  * daily-push, this does not advance current_day — it's a second touchpoint

@@ -1,0 +1,63 @@
+# Hourly driver for the two messaging crons.
+#
+# These endpoints are NOT scheduled by Vercel. Both select recipients by each
+# participant's own preferred_delivery_hour evaluated in their own timezone, so
+# they must be invoked once an hour to be correct. Vercel Hobby only allows
+# once-per-day cron jobs, so the schedule lives here instead.
+#
+# Setup required:
+#   1. Add CRON_SECRET as a repository secret (Settings > Secrets and variables
+#      > Actions). It must match CRON_SECRET in the Vercel production project.
+#   2. This file must be on the default branch — GitHub only runs scheduled
+#      workflows from the default branch, so it will not fire from a feature
+#      branch.
+#
+# Run it AT MOST once per hour. daily-push advances current_day on every send,
+# and there is no per-day guard, so two runs inside the same local hour deliver
+# two days of curriculum to the same participant and permanently skip a day of
+# their content. That is also why manual runs below are gated behind a typed
+# confirmation.
+
+name: Scheduled messaging
+
+on:
+  schedule:
+    # Top of every hour, UTC. Each run serves whichever participants are
+    # currently at their chosen local hour, so this is DST-correct by
+    # construction — no schedule change is needed in November.
+    - cron: "0 * * * *"
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "send" to confirm. This sends REAL messages and advances participants a day.'
+        required: true
+        default: ""
+
+# Never let a slow run overlap the next hour's run: an overlap could double-send.
+concurrency:
+  group: scheduled-messaging
+  cancel-in-progress: false
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || inputs.confirm == 'send'
+    env:
+      BASE_URL: https://www.30daysonthemount.com
+    steps:
+      - name: Daily push
+        run: |
+          code=$(curl -sS -w '%{http_code}' -o /tmp/daily.json \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "$BASE_URL/api/cron/daily-push")
+          echo "HTTP $code"; cat /tmp/daily.json; echo
+          test "$code" = "200"
+
+      - name: Evening check-in
+        if: always()
+        run: |
+          code=$(curl -sS -w '%{http_code}' -o /tmp/evening.json \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "$BASE_URL/api/cron/evening-checkin")
+          echo "HTTP $code"; cat /tmp/evening.json; echo
+          test "$code" = "200"
