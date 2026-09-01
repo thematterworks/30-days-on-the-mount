@@ -1,6 +1,7 @@
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { sendFreeformToChannel, sendPushToChannel } from "@/lib/messaging";
+import { DEFAULT_TIMEZONE, getLocalDate } from "@/lib/timezone";
 import {
   GATEKEEPER_TRIGGER,
   detectYesNo,
@@ -452,6 +453,11 @@ async function completeOnboardingAndActivate(supabase: Supabase, user: UserRow):
       onboarding_step: "completed",
       access_tier: "premium",
       premium_granted_at: new Date().toISOString(),
+      // Day 0 goes out below, so today's push is already spent. Without this
+      // stamp the daily-push cron would see a participant past their delivery
+      // hour with no push recorded and send Day 1 on the same day they were
+      // welcomed — two days of curriculum in one day.
+      last_push_on: getLocalDate(user.timezone || DEFAULT_TIMEZONE, new Date()),
     })
     .eq("phone_number", user.phone_number);
 

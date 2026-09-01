@@ -6,17 +6,22 @@ import { isUnsubscribedRecipientError, sendPushToChannel } from "@/lib/messaging
 import { sendCurriculumEmail } from "@/lib/email";
 import { getEmailTheme } from "@/lib/system-config";
 import { cleanupExpiredMagicLinks, mintMagicLink } from "@/lib/participant-auth";
-import { DEFAULT_PREFERRED_HOUR, DEFAULT_TIMEZONE, getLocalHour } from "@/lib/timezone";
+import { decideDailyPush } from "@/lib/timezone";
 
 export const maxDuration = 300;
 
 /**
  * Daily push: runs hourly (see .github/workflows/scheduled-messaging.yml —
  * not a Vercel cron). For every active participant
- * whose preferred local hour matches the current hour in their timezone, it
- * sends the *next* day's curriculum template (current_day + 1) and advances
- * current_day to match, then — if they opted into email during onboarding —
- * sends the same day's content by email.
+ * who has reached their preferred local hour and has not already been pushed
+ * today (users.last_push_on, in their own timezone), it sends the *next* day's
+ * curriculum template (current_day + 1) and advances current_day to match,
+ * then — if they opted into email during onboarding — sends the same day's
+ * content by email.
+ *
+ * Delivery is idempotent per participant per local day: running this endpoint
+ * any number of times within one of their days delivers at most one day of
+ * curriculum.
  *
  * current_day for an active participant always reflects the last day
  * actually delivered — Day 0 is sent in real time by the webhook's
@@ -59,6 +64,8 @@ export async function GET(request: NextRequest) {
   let failed = 0;
   let completed = 0;
   let autoOptedOut = 0;
+  let alreadySentToday = 0;
+  let missingGuardColumn = 0;
   let emailsSent = 0;
   let emailsFailed = 0;
   let emailsSkipped = 0;
@@ -67,11 +74,22 @@ export async function GET(request: NextRequest) {
   for (const user of activeUsers ?? []) {
     eligible += 1;
 
-    const localHour = getLocalHour(user.timezone || DEFAULT_TIMEZONE, now);
-    const preferredHour = user.preferred_delivery_hour ?? DEFAULT_PREFERRED_HOUR;
-    if (localHour === null || localHour !== preferredHour) {
-      continue; // not this participant's hour — check again next run
+    // See decideDailyPush: at most one push per participant per local day,
+    // eligible at or after their hour so a late run delays rather than loses
+    // a day. completeOnboardingAndActivate stamps last_push_on at activation,
+    // which is what stops a Day 0 welcome and a Day 1 push landing together.
+    const decision = decideDailyPush({
+      now,
+      timezone: user.timezone,
+      preferredHour: user.preferred_delivery_hour,
+      lastPushOn: user.last_push_on,
+    });
+    if (!decision.due) {
+      if (decision.reason === "already-sent-today") alreadySentToday += 1;
+      if (decision.reason === "missing-guard-column") missingGuardColumn += 1;
+      continue;
     }
+    const localDate = decision.localDate;
 
     processed += 1;
     const nextDay = user.current_day + 1;
@@ -139,7 +157,7 @@ export async function GET(request: NextRequest) {
     // normal daily reflection AI.
     await supabase
       .from("users")
-      .update({ current_day: nextDay, evening_completed: true })
+      .update({ current_day: nextDay, evening_completed: true, last_push_on: localDate })
       .eq("phone_number", user.phone_number);
 
     if (user.wants_email && user.email_address) {
@@ -166,6 +184,10 @@ export async function GET(request: NextRequest) {
     failed,
     completed,
     autoOptedOut,
+    alreadySentToday,
+    // Non-zero means migration 0015 has not been applied and NO pushes are
+    // going out. Deliberately fail-closed — see decideDailyPush.
+    missingGuardColumn,
     emailsSent,
     emailsFailed,
     emailsSkipped,

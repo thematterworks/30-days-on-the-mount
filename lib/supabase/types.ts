@@ -42,6 +42,8 @@ export type UserRow = {
   evening_completed: boolean;
   access_tier: AccessTier;
   premium_granted_at: string | null;
+  /** Local calendar date (YYYY-MM-DD, in the participant's timezone) of their most recent daily curriculum push. */
+  last_push_on: string | null;
 };
 
 export type MagicLinkRow = {

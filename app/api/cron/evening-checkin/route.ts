@@ -4,7 +4,7 @@ import { env } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { isUnsubscribedRecipientError, sendPushToChannel } from "@/lib/messaging";
 import { getEveningCheckinFallbackText, getEveningCheckinTemplateName } from "@/lib/system-config";
-import { DEFAULT_PREFERRED_HOUR, DEFAULT_TIMEZONE, getLocalHour } from "@/lib/timezone";
+import { DEFAULT_PREFERRED_HOUR, DEFAULT_TIMEZONE, getLocalDate, getLocalHour } from "@/lib/timezone";
 
 export const maxDuration = 300;
 
@@ -69,16 +69,29 @@ export async function GET(request: NextRequest) {
   let succeeded = 0;
   let failed = 0;
   let autoOptedOut = 0;
+  let alreadySentToday = 0;
 
   for (const user of activeUsers ?? []) {
     eligible += 1;
 
-    const localHour = getLocalHour(user.timezone || DEFAULT_TIMEZONE, now);
+    const timezone = user.timezone || DEFAULT_TIMEZONE;
+    const localHour = getLocalHour(timezone, now);
+    const localDate = getLocalDate(timezone, now);
     const preferredHour = user.preferred_delivery_hour ?? DEFAULT_PREFERRED_HOUR;
     const targetEveningHour = (preferredHour + EVENING_OFFSET_HOURS) % 24;
 
-    if (localHour === null || localHour !== targetEveningHour) {
+    if (localHour === null || localDate === null || localHour !== targetEveningHour) {
       continue; // not this participant's evening hour — check again next run
+    }
+
+    // Same one-per-local-day guarantee daily-push has, derived from the
+    // evening_sent_at timestamp this endpoint already maintains rather than a
+    // second column. A duplicate here costs a participant a redundant text
+    // rather than a lost day of curriculum, but it is still an unwanted
+    // message to someone who did not ask for two.
+    if (user.evening_sent_at && getLocalDate(timezone, new Date(user.evening_sent_at)) === localDate) {
+      alreadySentToday += 1;
+      continue;
     }
 
     processed += 1;
@@ -119,5 +132,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ eligible, processed, succeeded, failed, autoOptedOut });
+  return NextResponse.json({ eligible, processed, succeeded, failed, autoOptedOut, alreadySentToday });
 }
