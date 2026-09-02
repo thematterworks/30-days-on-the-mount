@@ -45,19 +45,40 @@ jobs:
     env:
       BASE_URL: https://www.30daysonthemount.com
     steps:
+      # Distinguishes "secret missing" from "secret wrong" before either call.
+      # An unset secret interpolates to an empty string, so the request goes
+      # out as a well-formed `Authorization: Bearer ` and comes back 401 —
+      # identical to a wrong value, which makes the real cause invisible.
+      - name: Verify CRON_SECRET is available
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET resolved to an empty string. Add it under Settings > Secrets and variables > Actions as a *Repository* secret. An Environment secret does not resolve in a job that declares no environment:, and produces exactly this failure."
+            exit 1
+          fi
+          echo "CRON_SECRET is set (${#CRON_SECRET} chars). It must match CRON_SECRET in the Vercel *Production* environment exactly; a mismatch returns 401."
+
       - name: Daily push
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           code=$(curl -sS -w '%{http_code}' -o /tmp/daily.json \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Authorization: Bearer $CRON_SECRET" \
             "$BASE_URL/api/cron/daily-push")
           echo "HTTP $code"; cat /tmp/daily.json; echo
+          if [ "$code" = "401" ]; then
+            echo "::error::401 from daily-push. The header format is correct, so this is a value mismatch: the CRON_SECRET repository secret differs from CRON_SECRET in the Vercel Production environment. Note that changing it in Vercel needs a redeploy before the function sees the new value."
+          fi
           test "$code" = "200"
 
       - name: Evening check-in
         if: always()
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           code=$(curl -sS -w '%{http_code}' -o /tmp/evening.json \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Authorization: Bearer $CRON_SECRET" \
             "$BASE_URL/api/cron/evening-checkin")
           echo "HTTP $code"; cat /tmp/evening.json; echo
           test "$code" = "200"
