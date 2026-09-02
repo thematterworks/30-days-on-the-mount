@@ -1,14 +1,13 @@
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { timed } from "@/lib/timing";
 import type { EmailTheme } from "@/lib/email-template";
 
 /** Reads a system_config value, or `fallback` if the key is missing. */
 export async function getSystemConfigValue(key: string, fallback = ""): Promise<string> {
-  const { data } = await getSupabaseAdmin()
-    .from("system_config")
-    .select("value")
-    .eq("key", key)
-    .maybeSingle();
+  const { data } = await timed(`cfg:${key}`, () =>
+    getSupabaseAdmin().from("system_config").select("value").eq("key", key).maybeSingle(),
+  );
   return data?.value ?? fallback;
 }
 

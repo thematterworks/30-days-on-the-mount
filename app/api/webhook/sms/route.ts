@@ -2,6 +2,7 @@ import { after, NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { parseTwilioInboundParams, verifyTwilioSignatureForRequest } from "@/lib/twilio";
 import { handleInboundMessage } from "@/lib/conversation-engine";
+import { withTiming } from "@/lib/timing";
 
 const EMPTY_TWIML = `<?xml version="1.0" encoding="UTF-8"?><Response></Response>`;
 
@@ -71,16 +72,21 @@ export async function POST(request: NextRequest) {
     // (lib/twilio.ts sendSmsMessage) rather than in this response body, so
     // nothing about the reply depends on the request still being open.
     after(async () => {
-      try {
-        await handleInboundMessage({
-          channel: "sms",
-          from: inbound.from,
-          text,
-          providerMessageId: inbound.messageSid,
-        });
-      } catch (error) {
-        console.error("Failed to process inbound SMS message", error);
-      }
+      // Timed as one unit: this is the span the participant actually waits
+      // on, since the 200 above has already gone back to Twilio. The summary
+      // line lands in the function logs as `[timing] inbound-sms ...`.
+      await withTiming("inbound-sms", async () => {
+        try {
+          await handleInboundMessage({
+            channel: "sms",
+            from: inbound.from,
+            text,
+            providerMessageId: inbound.messageSid,
+          });
+        } catch (error) {
+          console.error("Failed to process inbound SMS message", error);
+        }
+      });
     });
   }
 

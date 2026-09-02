@@ -2,6 +2,7 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { sendFreeformToChannel, sendPushToChannel } from "@/lib/messaging";
 import { DEFAULT_TIMEZONE, getLocalDate } from "@/lib/timezone";
+import { timed } from "@/lib/timing";
 import {
   GATEKEEPER_TRIGGER,
   detectYesNo,
@@ -92,7 +93,9 @@ export async function handleInboundMessage(params: {
   const { channel, from, providerMessageId } = params;
   const text = params.text.trim();
 
-  const { data: existingUser } = await supabase.from("users").select("*").eq("phone_number", from).maybeSingle();
+  const { data: existingUser } = await timed("db:load-user", () =>
+    supabase.from("users").select("*").eq("phone_number", from).maybeSingle(),
+  );
 
   let user: UserRow | null = existingUser;
 
@@ -101,18 +104,20 @@ export async function handleInboundMessage(params: {
     // us on. The challenge no longer starts automatically — status stays
     // 'pending' (current_day: -1) until the switchboard below explicitly
     // activates them.
-    const { data: created } = await supabase
-      .from("users")
-      .insert({
-        phone_number: from,
-        status: "pending",
-        current_day: -1,
-        last_interaction_at: new Date().toISOString(),
-        channel,
-        access_tier: "premium", // universal premium — everyone gets /journey
-      })
-      .select()
-      .single();
+    const { data: created } = await timed("db:create-user", () =>
+      supabase
+        .from("users")
+        .insert({
+          phone_number: from,
+          status: "pending",
+          current_day: -1,
+          last_interaction_at: new Date().toISOString(),
+          channel,
+          access_tier: "premium", // universal premium — everyone gets /journey
+        })
+        .select()
+        .single(),
+    );
     user = created;
   } else {
     // Reconcile the participant's outbound channel with the transport this
@@ -127,13 +132,15 @@ export async function handleInboundMessage(params: {
     // locked at creation; that only made sense while WhatsApp was a live
     // second transport, and it is now retired.
     const channelChanged = user.channel !== channel;
-    await supabase
-      .from("users")
-      .update({
-        last_interaction_at: new Date().toISOString(),
-        ...(channelChanged ? { channel } : {}),
-      })
-      .eq("phone_number", from);
+    await timed("db:touch-user", () =>
+      supabase
+        .from("users")
+        .update({
+          last_interaction_at: new Date().toISOString(),
+          ...(channelChanged ? { channel } : {}),
+        })
+        .eq("phone_number", from),
+    );
 
     if (channelChanged) {
       // The reply below is dispatched from this in-memory row, so it has to
@@ -280,11 +287,9 @@ async function runSwitchboard(supabase: Supabase, user: UserRow, text: string) {
       return;
     }
 
-    const { data: curriculumDay } = await supabase
-      .from("curriculum_days")
-      .select("*")
-      .eq("day_number", user.current_day)
-      .maybeSingle();
+    const { data: curriculumDay } = await timed("db:curriculum", () =>
+      supabase.from("curriculum_days").select("*").eq("day_number", user.current_day).maybeSingle(),
+    );
 
     // First reply after today's short WhatsApp template teaser: the
     // template itself is a teaser (title, invitation, scripture) that fits
@@ -485,11 +490,9 @@ async function completeOnboardingAndActivate(supabase: Supabase, user: UserRow):
     })
     .eq("phone_number", user.phone_number);
 
-  const { data: welcomeDay } = await supabase
-    .from("curriculum_days")
-    .select("template_name, title, fallback_text")
-    .eq("day_number", 0)
-    .maybeSingle();
+  const { data: welcomeDay } = await timed("db:curriculum-day0", () =>
+    supabase.from("curriculum_days").select("template_name, title, fallback_text").eq("day_number", 0).maybeSingle(),
+  );
 
   const templateName = welcomeDay?.template_name ?? "day_00_welcome";
   // A2P 10DLC: the opt-in confirmation (first message) must carry the
@@ -591,13 +594,15 @@ async function logMessage(
     channel: MessageChannel;
   },
 ) {
-  await supabase.from("message_logs").insert({
-    phone_number: params.phoneNumber,
-    direction: params.direction,
-    message_type: params.messageType,
-    message_body: params.body,
-    provider_message_id: params.providerMessageId,
-    status: params.status,
-    channel: params.channel,
-  });
+  await timed("db:log-message", () =>
+    supabase.from("message_logs").insert({
+      phone_number: params.phoneNumber,
+      direction: params.direction,
+      message_type: params.messageType,
+      message_body: params.body,
+      provider_message_id: params.providerMessageId,
+      status: params.status,
+      channel: params.channel,
+    }),
+  );
 }

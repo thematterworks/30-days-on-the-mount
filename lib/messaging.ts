@@ -2,6 +2,7 @@ import "server-only";
 import { sendFreeformTextMessage, sendTemplateMessage } from "@/lib/whatsapp";
 import { sendSmsMessage } from "@/lib/twilio";
 import type { MessageChannel } from "@/lib/supabase/types";
+import { timed } from "@/lib/timing";
 
 export interface ChannelSendResult {
   ok: boolean;
@@ -41,9 +42,9 @@ export async function sendFreeformToChannel(
   body: string,
 ): Promise<ChannelSendResult> {
   if (channel === "sms") {
-    return sendSmsMessage(to, body);
+    return timed("send:twilio", () => sendSmsMessage(to, body));
   }
-  return sendFreeformTextMessage(to, body);
+  return timed("send:whatsapp", () => sendFreeformTextMessage(to, body));
 }
 
 /**
@@ -63,7 +64,7 @@ export async function sendPushToChannel(
   smsBody: string,
 ): Promise<ChannelSendResult> {
   if (channel === "sms") {
-    return sendSmsMessage(to, smsBody);
+    return timed("send:twilio", () => sendSmsMessage(to, smsBody));
   }
-  return sendTemplateMessage(to, whatsappTemplateName);
+  return timed("send:whatsapp", () => sendTemplateMessage(to, whatsappTemplateName));
 }
