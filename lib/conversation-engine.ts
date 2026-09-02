@@ -97,10 +97,10 @@ export async function handleInboundMessage(params: {
   let user: UserRow | null = existingUser;
 
   if (!user) {
-    // New contact: land them in the waiting room, and lock in the channel
-    // they first reached us on. The challenge no longer starts
-    // automatically — status stays 'pending' (current_day: -1) until the
-    // switchboard below explicitly activates them.
+    // New contact: land them in the waiting room on the channel they reached
+    // us on. The challenge no longer starts automatically — status stays
+    // 'pending' (current_day: -1) until the switchboard below explicitly
+    // activates them.
     const { data: created } = await supabase
       .from("users")
       .insert({
@@ -115,13 +115,37 @@ export async function handleInboundMessage(params: {
       .single();
     user = created;
   } else {
-    await supabase.from("users").update({ last_interaction_at: new Date().toISOString() }).eq("phone_number", from);
+    // Reconcile the participant's outbound channel with the transport this
+    // message actually arrived on.
+    //
+    // users.channel defaults to 'whatsapp' (migration 0008), so every row
+    // created before the SMS channel existed carries that value. Replies are
+    // dispatched on users.channel, so an SMS participant on a legacy row had
+    // every reply sent to the Meta Graph API — which fails, silently from
+    // their side: the webhook returns 200, the inbound message is stored, and
+    // nothing ever reaches their phone. The channel used to be treated as
+    // locked at creation; that only made sense while WhatsApp was a live
+    // second transport, and it is now retired.
+    const channelChanged = user.channel !== channel;
+    await supabase
+      .from("users")
+      .update({
+        last_interaction_at: new Date().toISOString(),
+        ...(channelChanged ? { channel } : {}),
+      })
+      .eq("phone_number", from);
+
+    if (channelChanged) {
+      // The reply below is dispatched from this in-memory row, so it has to
+      // carry the corrected channel too — persisting alone would leave this
+      // very message going out on the stale transport.
+      user = { ...user, channel };
+      console.info(`Reconciled channel for ${from}: ${existingUser?.channel} -> ${channel}`);
+    }
   }
 
-  // Logged with the transport this specific message actually arrived on
-  // (channel), not necessarily user.channel — a participant's outbound
-  // channel is locked at creation, but nothing stops them from texting in
-  // from the other transport occasionally.
+  // Logged with the transport this specific message actually arrived on,
+  // which after the reconciliation above is also user.channel.
   await logMessage(supabase, {
     phoneNumber: from,
     direction: "inbound",
