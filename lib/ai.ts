@@ -9,7 +9,10 @@ import Anthropic, {
 } from "@anthropic-ai/sdk";
 import { env } from "@/lib/env";
 
-const MODEL = "claude-opus-4-8";
+// Claude Sonnet 5. Chosen over the Opus tier for latency: these are short,
+// single-turn SMS replies (200-512 tokens), where time-to-first-token
+// dominates the participant's experience far more than reasoning depth.
+const MODEL = "claude-sonnet-5";
 
 let client: Anthropic | null = null;
 
@@ -34,6 +37,20 @@ async function callClaude(system: string, userMessage: string, maxTokens: number
     response = await getClient().messages.create({
       model: MODEL,
       max_tokens: maxTokens,
+      // Set explicitly to preserve the previous behaviour rather than change
+      // it: Opus 4.8 ran without thinking when this parameter was omitted,
+      // whereas Sonnet 5 runs *adaptive* thinking when omitted. Leaving it
+      // off would have switched thinking on as a side effect of the model
+      // swap.
+      //
+      // Adaptive means the model decides per request, so the cost is a
+      // latency spike on some turns rather than on all of them — and thinking
+      // tokens count against max_tokens, which is a real hazard for
+      // extractPreferredHour (20) and detectYesNo (10): a turn that chose to
+      // think could spend the whole budget and return no text block, making
+      // those helpers answer null. Disabling makes reply latency predictable
+      // and keeps those two budgets entirely available for the answer.
+      thinking: { type: "disabled" },
       system,
       messages: [{ role: "user", content: userMessage }],
     });
