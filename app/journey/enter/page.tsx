@@ -5,6 +5,7 @@ import {
   PARTICIPANT_SESSION_COOKIE,
   PARTICIPANT_SESSION_MAX_AGE_SECONDS,
   createParticipantSessionToken,
+  parseJourneyDay,
   peekMagicLinkValid,
   verifyMagicLink,
 } from "@/lib/participant-auth";
@@ -35,6 +36,10 @@ export default async function EnterPage({ searchParams }: PageProps<"/journey/en
     redirect("/journey/expired");
   }
 
+  // Destination day from the link, if it carried one. Parsed here only to
+  // render it into the form; the server action re-parses what it receives.
+  const destinationDay = parseJourneyDay(typeof params.d === "string" ? params.d : undefined);
+
   async function enter(formData: FormData) {
     "use server";
     const submittedToken = String(formData.get("t") ?? "");
@@ -52,7 +57,15 @@ export default async function EnterPage({ searchParams }: PageProps<"/journey/en
       path: "/",
       maxAge: PARTICIPANT_SESSION_MAX_AGE_SECONDS,
     });
-    redirect("/journey");
+
+    // Re-parsed rather than trusted: the hidden field is client-supplied, so
+    // this runs the same validation again and builds the path from an integer
+    // we produced. An unparseable or absent day falls back to the journey
+    // index. The day page independently gates the day against the
+    // participant's own current_day, so a tampered `d` cannot open a day they
+    // have not reached — it just bounces them back to /journey.
+    const day = parseJourneyDay(String(formData.get("d") ?? ""));
+    redirect(day === null ? "/journey" : `/journey/day/${day}`);
   }
 
   return (
@@ -64,6 +77,7 @@ export default async function EnterPage({ searchParams }: PageProps<"/journey/en
 
         <form action={enter} className="mt-10">
           <input type="hidden" name="t" value={token} />
+          {destinationDay !== null && <input type="hidden" name="d" value={destinationDay} />}
           <button
             type="submit"
             className="rounded-full border border-zoe-gold/60 px-8 py-3 font-serif text-lg text-zoe-gold transition-colors hover:bg-zoe-gold/10"

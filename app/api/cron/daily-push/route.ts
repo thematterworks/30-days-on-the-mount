@@ -110,14 +110,20 @@ export async function GET(request: NextRequest) {
 
     let smsBody = `${curriculumDay.title}\n\n${curriculumDay.fallback_text}`;
 
-    // Every daily SMS carries a fresh /journey magic link (a persistent
-    // 30-day key, per lib/participant-auth.ts). Access is universal-premium
-    // now, so there's no tier gate — just the channel: an inline link works
-    // in a free-text SMS body. (WhatsApp is retired; if a legacy whatsapp
-    // row exists, its fixed template can't carry an arbitrary URL, so it's
-    // skipped rather than failing.)
+    // Every daily SMS carries a fresh magic link (a persistent 30-day key,
+    // per lib/participant-auth.ts), deep-linked to the day being delivered so
+    // the participant lands on today's reading rather than the journey index.
+    // Access is universal-premium now, so there's no tier gate — just the
+    // channel: an inline link works in a free-text SMS body. (WhatsApp is
+    // retired; if a legacy whatsapp row exists, its fixed template can't
+    // carry an arbitrary URL, so it's skipped rather than failing.)
+    //
+    // nextDay is safe to link even though current_day is only advanced after
+    // a successful send below: the participant receives the text after that
+    // update lands, and if the update failed the day page simply redirects
+    // them to /journey instead of erroring.
     if (user.channel === "sms") {
-      const link = await mintMagicLink(user.phone_number);
+      const link = await mintMagicLink(user.phone_number, nextDay);
       if (link) {
         smsBody += `\n\nStep into today in the app: ${link.url}`;
         linksAppended += 1;

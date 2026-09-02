@@ -122,17 +122,48 @@ async function hashToken(rawToken: string): Promise<string> {
     .join("");
 }
 
-export function buildMagicLinkUrl(rawToken: string): string {
-  return `${SITE_ORIGIN}/journey/enter?t=${rawToken}`;
+/** Highest day with a page, matching the curriculum_days 0-31 range (day 0 has no page). */
+export const MAX_JOURNEY_DAY = 31;
+
+/**
+ * Parses a magic link's `d` (destination day) parameter.
+ *
+ * Deliberately narrow: a magic link may only ever carry a day *number*, never
+ * a path or URL, and the destination path is assembled server-side from the
+ * parsed integer. That is what keeps `/journey/enter` from being an open
+ * redirect — an attacker who obtains a link cannot repoint it anywhere, only
+ * choose a day, and the day page still gates that against the participant's
+ * own current_day. Returns null for anything unparseable, so callers fall
+ * back to the journey index rather than failing.
+ */
+export function parseJourneyDay(value: string | undefined): number | null {
+  if (!value || !/^\d{1,2}$/.test(value)) return null;
+  const day = Number(value);
+  return day >= 1 && day <= MAX_JOURNEY_DAY ? day : null;
+}
+
+/**
+ * Builds the participant-facing magic link. When `dayNumber` is given the
+ * link carries it as `d`, so `/journey/enter` can land the participant on
+ * that day's page instead of the journey index once the session is set.
+ */
+export function buildMagicLinkUrl(rawToken: string, dayNumber?: number): string {
+  const base = `${SITE_ORIGIN}/journey/enter?t=${rawToken}`;
+  const day = parseJourneyDay(dayNumber === undefined ? undefined : String(dayNumber));
+  return day === null ? base : `${base}&d=${day}`;
 }
 
 /**
  * Mints a one-time magic link for a participant: stores the token hash with
- * a 48-hour expiry and returns the ready-to-send URL (containing the raw
- * token, which is never persisted). Caller is responsible for delivery via
- * lib/messaging.ts.
+ * a MAGIC_LINK_TTL_SECONDS expiry (30 days) and returns the ready-to-send URL
+ * (containing the raw token, which is never persisted). Pass `dayNumber` to
+ * deep-link the participant to that day. Caller is responsible for delivery
+ * via lib/messaging.ts.
  */
-export async function mintMagicLink(phoneNumber: string): Promise<{ url: string; expiresAt: string } | null> {
+export async function mintMagicLink(
+  phoneNumber: string,
+  dayNumber?: number,
+): Promise<{ url: string; expiresAt: string } | null> {
   const rawToken = generateRawToken();
   const tokenHash = await hashToken(rawToken);
   const expiresAt = new Date(Date.now() + MAGIC_LINK_TTL_SECONDS * 1000).toISOString();
@@ -146,7 +177,7 @@ export async function mintMagicLink(phoneNumber: string): Promise<{ url: string;
     return null;
   }
 
-  return { url: buildMagicLinkUrl(rawToken), expiresAt };
+  return { url: buildMagicLinkUrl(rawToken, dayNumber), expiresAt };
 }
 
 /**
