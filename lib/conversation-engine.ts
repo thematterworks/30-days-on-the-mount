@@ -2,6 +2,7 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { sendFreeformToChannel, sendPushToChannel } from "@/lib/messaging";
 import { DEFAULT_TIMEZONE, getLocalDate } from "@/lib/timezone";
+import { mintMagicLink } from "@/lib/participant-auth";
 import { timed } from "@/lib/timing";
 import {
   GATEKEEPER_TRIGGER,
@@ -503,7 +504,25 @@ async function completeOnboardingAndActivate(supabase: Supabase, user: UserRow):
   const welcomeText = welcomeDay
     ? `${welcomeDay.title}\n\n${welcomeDay.fallback_text}`
     : "Welcome to 30 Days on the Mount.";
-  const smsBody = `${welcomeText}\n\n${complianceFooter}`;
+
+  // The welcome carries a magic link so the participant's session is
+  // established on their very first tap, rather than waiting for tomorrow's
+  // daily push. It is worth the extra SMS segment here because activation
+  // happens once per participant, unlike the evening check-in.
+  //
+  // No day is attached: Day 0 has no page (the day route requires >= 1), so
+  // this deliberately lands on the journey index.
+  let smsBody = welcomeText;
+  if (user.channel === "sms") {
+    const link = await mintMagicLink(user.phone_number);
+    if (link) {
+      smsBody += `\n\nYour companion app is here: ${link.url}`;
+    }
+  }
+
+  // Appended last so the A2P disclosures close the message, whether or not
+  // the link above was added.
+  smsBody += `\n\n${complianceFooter}`;
   const result = await sendPushToChannel(user.channel, user.phone_number, templateName, smsBody);
 
   await logMessage(supabase, {

@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { env } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { timed } from "@/lib/timing";
 import type { UserRow } from "@/lib/supabase/types";
 
 // Participant (/journey PWA) auth. Two distinct primitives:
@@ -168,9 +169,11 @@ export async function mintMagicLink(
   const tokenHash = await hashToken(rawToken);
   const expiresAt = new Date(Date.now() + MAGIC_LINK_TTL_SECONDS * 1000).toISOString();
 
-  const { error } = await getSupabaseAdmin()
-    .from("magic_links")
-    .insert({ phone_number: phoneNumber, token_hash: tokenHash, expires_at: expiresAt });
+  const { error } = await timed("db:mint-magic-link", () =>
+    getSupabaseAdmin()
+      .from("magic_links")
+      .insert({ phone_number: phoneNumber, token_hash: tokenHash, expires_at: expiresAt }),
+  );
 
   if (error) {
     console.error("Failed to mint magic link for", phoneNumber, error);
