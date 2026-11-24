@@ -41,6 +41,12 @@ export async function sendFreeformToChannel(
   to: string,
   body: string,
 ): Promise<ChannelSendResult> {
+  if (channel === "app") {
+    // A companion reply to someone using the app is read in the app: the
+    // caller logs it to message_logs and the app fetches it from there
+    // (GET /api/mobile/companion). Nothing goes out over a carrier.
+    return { ok: true, messageId: null, error: null };
+  }
   if (channel === "sms") {
     return timed("send:twilio", () => sendSmsMessage(to, body));
   }
@@ -63,6 +69,14 @@ export async function sendPushToChannel(
   whatsappTemplateName: string,
   smsBody: string,
 ): Promise<ChannelSendResult> {
+  // A participant who joined through the app has consented to a sign-in
+  // code, not to daily texts, so they are never sent the program by SMS. Their
+  // day unlocks in the app; reporting success is what lets the cron advance
+  // current_day. Push notifications deliver the invitation itself
+  // (ios/ARCHITECTURE.md, Phase 3).
+  if (channel === "app") {
+    return { ok: true, messageId: null, error: null };
+  }
   if (channel === "sms") {
     return timed("send:twilio", () => sendSmsMessage(to, smsBody));
   }

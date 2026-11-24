@@ -17,7 +17,8 @@ export type OnboardingStep =
 export type MessageDirection = "inbound" | "outbound";
 export type MessageType = "template" | "freeform" | "ai_generated";
 export type MessageStatus = "sent" | "delivered" | "read" | "failed";
-export type MessageChannel = "whatsapp" | "sms";
+/** "app" is the native iOS app (migration 0017): companion messages held in-app. */
+export type MessageChannel = "whatsapp" | "sms" | "app";
 export type AccessTier = "free" | "premium";
 export type CommunityPostStatus = "pending" | "approved" | "flagged" | "deleted";
 export type BlogPostStatus = "draft" | "published";
@@ -124,6 +125,23 @@ export type BlogPostRow = {
   updated_at: string;
 };
 
+export type SignInCodeRow = {
+  phone_number: string;
+  code_hash: string;
+  expires_at: string;
+  attempts: number;
+  sends_in_window: number;
+  window_started_at: string;
+};
+
+export type DeviceRow = {
+  apns_token: string;
+  phone_number: string;
+  live_activity_token: string | null;
+  environment: "development" | "production";
+  updated_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -148,6 +166,18 @@ export type Database = {
         Row: MagicLinkRow;
         Insert: Partial<MagicLinkRow> & { phone_number: string; token_hash: string; expires_at: string };
         Update: Partial<MagicLinkRow>;
+        Relationships: [];
+      };
+      sign_in_codes: {
+        Row: SignInCodeRow;
+        Insert: Partial<SignInCodeRow> & { phone_number: string; code_hash: string; expires_at: string };
+        Update: Partial<SignInCodeRow>;
+        Relationships: [];
+      };
+      devices: {
+        Row: DeviceRow;
+        Insert: Partial<DeviceRow> & { apns_token: string; phone_number: string; environment: DeviceRow["environment"] };
+        Update: Partial<DeviceRow>;
         Relationships: [];
       };
       curriculum_days: {

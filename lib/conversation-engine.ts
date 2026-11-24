@@ -121,18 +121,19 @@ export async function handleInboundMessage(params: {
     );
     user = created;
   } else {
-    // Reconcile the participant's outbound channel with the transport this
-    // message actually arrived on.
+    // Reconcile the participant's messaging channel with the transport this
+    // message arrived on — but only between the carrier channels.
     //
     // users.channel defaults to 'whatsapp' (migration 0008), so every row
-    // created before the SMS channel existed carries that value. Replies are
-    // dispatched on users.channel, so an SMS participant on a legacy row had
-    // every reply sent to the Meta Graph API — which fails, silently from
-    // their side: the webhook returns 200, the inbound message is stored, and
-    // nothing ever reaches their phone. The channel used to be treated as
-    // locked at creation; that only made sense while WhatsApp was a live
-    // second transport, and it is now retired.
-    const channelChanged = user.channel !== channel;
+    // created before the SMS channel existed carries that value. Replies and
+    // pushes are dispatched on users.channel, so an SMS participant on a
+    // legacy row had every message sent to the Meta Graph API — which fails,
+    // silently from their side. A message arriving by SMS corrects that.
+    //
+    // The app never changes it. users.channel records how someone consented
+    // to be messaged; opening the app must neither stop the texts they agreed
+    // to nor start texts they never did.
+    const channelChanged = channel !== "app" && user.channel !== channel;
     await timed("db:touch-user", () =>
       supabase
         .from("users")
@@ -152,6 +153,13 @@ export async function handleInboundMessage(params: {
     }
   }
 
+  // Replies go back the way the message came: a message from the app is
+  // answered in the app, whatever channel the participant's daily texts use.
+  // In-memory only — the stored channel is untouched (see above).
+  if (user && channel === "app") {
+    user = { ...user, channel: "app" };
+  }
+
   // Logged with the transport this specific message actually arrived on,
   // which after the reconciliation above is also user.channel.
   await logMessage(supabase, {
@@ -169,11 +177,17 @@ export async function handleInboundMessage(params: {
     return;
   }
 
+  // SMS keywords (STOP, HELP, START, MOUNTAIN) are carrier-compliance
+  // commands, and only mean that over SMS. In the app they are just words in
+  // a conversation — someone telling their companion they want to "stop" must
+  // never be unsubscribed from their texts by it.
+  const smsKeywordsApply = channel !== "app";
+
   // Compliance opt-out — checked first, ahead of ice-breakers, onboarding,
   // and every AI path. Works regardless of current status (including an
   // already-'pending' or already-'opted_out' participant) so it can never
   // be blocked by the global AI toggle or a per-user ai_paused flag.
-  if (isOptOutKeyword(text)) {
+  if (smsKeywordsApply && isOptOutKeyword(text)) {
     await handleOptOut(supabase, user);
     return;
   }
@@ -181,7 +195,7 @@ export async function handleInboundMessage(params: {
   // Same priority and reasoning as opt-out: A2P 10DLC compliance requires
   // HELP to always work, regardless of AI toggle, pause state, or
   // onboarding step — so it's checked here, not inside the switchboard.
-  if (isHelpKeyword(text)) {
+  if (smsKeywordsApply && isHelpKeyword(text)) {
     await sendAndLog(
       supabase,
       user,
@@ -194,12 +208,12 @@ export async function handleInboundMessage(params: {
   // Primary opt-in: MOUNTAIN / START activate immediately on Day 0 (active,
   // premium) and fire the Day 0 welcome — no conversational onboarding.
   // Checked before the switchboard so it works from any status.
-  if (isOptInKeyword(text)) {
+  if (smsKeywordsApply && isOptInKeyword(text)) {
     await handleOptIn(supabase, user);
     return;
   }
 
-  await runSwitchboard(supabase, user, text);
+  await runSwitchboard(supabase, user, text, channel);
 }
 
 /**
@@ -233,7 +247,7 @@ async function handleOptOut(supabase: Supabase, user: Pick<UserRow, "phone_numbe
   );
 }
 
-async function runSwitchboard(supabase: Supabase, user: UserRow, text: string) {
+async function runSwitchboard(supabase: Supabase, user: UserRow, text: string, channel: MessageChannel) {
   // 1. Static ice-breaker intercepts — exact match, before any AI call,
   // available at any point in the conversation (including mid-onboarding).
   // Object.hasOwn, not a bare index: `text` is raw inbound SMS, so a
@@ -267,7 +281,11 @@ async function runSwitchboard(supabase: Supabase, user: UserRow, text: string) {
   }
 
   // 3. Already-active participants.
-  if (user.status === "active") {
+  // Someone who has finished the 31 days keeps their companion in the app —
+  // the course ends, the conversation doesn't. Over SMS a completed
+  // participant still gets no automated reply (step 4).
+  const conversing = user.status === "active" || (channel === "app" && user.status === "completed");
+  if (conversing) {
     // Evening Check-In: evening_sent_at/evening_completed (set by the
     // evening-checkin cron, cleared by daily-push on day rollover) tell us
     // whether this reply is responding to tonight's check-in, across both
