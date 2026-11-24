@@ -32,6 +32,7 @@ struct RootView: View {
             switch phase {
             case .active:
                 model.audio.enterForeground()
+                model.applyFocus()
                 Task { await model.refresh() }
             case .background:
                 model.audio.enterBackground()

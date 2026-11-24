@@ -76,12 +76,16 @@ struct ProfileView: View {
                 }
                 .listRowBackground(rowBackground)
 
-                Section("Notifications") {
+                Section {
                     Button("Notification settings") {
                         if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
                             UIApplication.shared.open(url)
                         }
                     }
+                } header: {
+                    Text("Notifications")
+                } footer: {
+                    Text("For undistracted time, add \"On the Mount\" to a Focus: Settings → Focus → choose a Focus → Focus Filters. While that Focus is on, other apps stay quiet and this one opens to today.")
                 }
                 .listRowBackground(rowBackground)
 

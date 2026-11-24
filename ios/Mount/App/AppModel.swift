@@ -120,7 +120,7 @@ final class AppModel {
 
     /// The one AppModel, for callbacks that arrive outside SwiftUI (the API
     /// client's 401 handler).
-    private static weak var current: AppModel?
+    static weak var current: AppModel?
 
     /// Runs once the participant is signed in, and again each time the app
     /// returns to the foreground: the server's current day, the
@@ -137,6 +137,18 @@ final class AppModel {
         }
         _ = await (journeySync, companionSync)
         await registerForPushIfAllowed()
+    }
+
+    /// The "On the Mount" Focus filter (FocusFilter.swift): while it's on,
+    /// the app opens to today and keeps its music playing.
+    func applyFocus(_ focus: MountFocusState = .load()) {
+        guard focus.isActive, session.session != nil, hasBeenWelcomed else { return }
+        if focus.openToToday {
+            storyRoute = nil
+            isProfilePresented = false
+            selectedTab = .journey
+        }
+        if focus.playAmbient, !audio.isAmbientOn { audio.isAmbientOn = true }
     }
 
     /// The morning hour is where the server sends the day, so a change
