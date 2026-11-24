@@ -106,6 +106,7 @@ final class AppModel {
            let day = Int(arguments[index + 1]) {
             journey.setCurrentDayForPreview(day)
         }
+        if arguments.contains("-previewSummit") { journey.reachSummitForPreview() }
         #endif
 
         Self.current = self

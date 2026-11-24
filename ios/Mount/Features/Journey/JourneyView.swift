@@ -25,6 +25,11 @@ struct JourneyView: View {
                         }
                         .id(day.dayNumber)
                 }
+                if journey.hasReachedSummit {
+                    SummitPage()
+                        .containerRelativeFrame(.vertical)
+                        .id(JourneyView.summitID)
+                }
             }
             .scrollTargetLayout()
         }
@@ -41,11 +46,13 @@ struct JourneyView: View {
         }
     }
 
+    static let summitID = 1_000
+
     /// Appears only when the participant has wandered away from today.
     @ViewBuilder
     private var returnToToday: some View {
         let today = model.journey.progress.currentDay
-        if let focusedDay, focusedDay != today {
+        if let focusedDay, focusedDay != today, focusedDay != Self.summitID {
             Button {
                 withAnimation(.smooth(duration: 0.9)) { self.focusedDay = today }
             } label: {

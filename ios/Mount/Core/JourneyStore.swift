@@ -49,6 +49,11 @@ final class JourneyStore {
     func canOpen(_ number: Int) -> Bool { progress.canOpen(number) && day(number) != nil }
     func hasFinished(_ number: Int) -> Bool { progress.finishedStories.contains(number) }
 
+    /// The last day is open and has been carried: the summit page appears.
+    var hasReachedSummit: Bool {
+        totalDays > 0 && progress.currentDay >= totalDays && hasFinished(totalDays)
+    }
+
     func load() async {
         do {
             days = try await source.loadDays()
@@ -129,6 +134,13 @@ final class JourneyStore {
     /// `-previewDay N`: starts a walkthrough partway through the journey.
     func setCurrentDayForPreview(_ day: Int) {
         progress.currentDay = max(1, day)
+        persist()
+    }
+
+    /// `-previewSummit`: every day carried but a few, to see the summit.
+    func reachSummitForPreview() {
+        progress.currentDay = 31
+        progress.finishedStories = Set(1...31).subtracting([6, 13, 22])
         persist()
     }
 
