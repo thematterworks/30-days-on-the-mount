@@ -8,6 +8,7 @@ struct ProfileView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var confirmingDeletion = false
+    @State private var isChoosingIcon = false
     @State private var isDeleting = false
     @State private var deletionError: String?
 
@@ -18,11 +19,18 @@ struct ProfileView: View {
             Form {
                 Section {
                     VStack(spacing: 14) {
-                        Text(model.profileInitials)
-                            .font(.zoeDisplay(30))
-                            .foregroundStyle(Zoe.navy)
-                            .frame(width: 76, height: 76)
-                            .background(Zoe.peach, in: Circle())
+                        Button { isChoosingIcon = true } label: {
+                            AvatarView(size: 76)
+                                .overlay(alignment: .bottomTrailing) {
+                                    Image(systemName: "pencil")
+                                        .font(.caption2.weight(.bold))
+                                        .foregroundStyle(Zoe.navy)
+                                        .frame(width: 24, height: 24)
+                                        .background(Zoe.ink, in: Circle())
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Change profile icon")
                         Text(formattedPhone).font(.zoeSerif(.headline)).foregroundStyle(Zoe.ink)
                         HStack(spacing: 28) {
                             stat("\(journey.progress.currentDay)", "of \(max(journey.totalDays, 1)) days")
@@ -113,6 +121,7 @@ struct ProfileView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .sheet(isPresented: $isChoosingIcon) { AvatarPicker() }
             .confirmationDialog(
                 "Delete your account?",
                 isPresented: $confirmingDeletion,

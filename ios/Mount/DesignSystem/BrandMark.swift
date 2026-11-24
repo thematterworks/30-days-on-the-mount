@@ -32,11 +32,7 @@ struct AvatarButton: View {
         Button {
             model.isProfilePresented = true
         } label: {
-            Text(model.profileInitials)
-                .font(.system(.footnote, design: .serif, weight: .semibold))
-                .foregroundStyle(Zoe.navy)
-                .frame(width: 34, height: 34)
-                .background(Zoe.peach, in: Circle())
+            AvatarView(size: 34)
                 .overlay(Circle().strokeBorder(Zoe.ink.opacity(0.5), lineWidth: 1))
         }
         .buttonStyle(.plain)

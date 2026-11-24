@@ -27,6 +27,7 @@ final class AppModel {
     let notifications: NotificationCoordinator
     let liveActivity: LiveActivityController
     let audio: AudioDirector
+    let avatar = AvatarStore()
     /// The server can read aloud; listen buttons appear only when it can.
     private(set) var voiceAvailable = false
 
@@ -192,6 +193,7 @@ final class AppModel {
         storyRoute = nil
         journey.clearLocalData()
         companion.clearLocalData()
+        avatar.clearLocalData()
         // The next person to sign in here deserves the welcome too.
         SharedStore.defaults.removeObject(forKey: Self.welcomedKey)
         hasBeenWelcomed = false
