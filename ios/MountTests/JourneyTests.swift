@@ -145,7 +145,7 @@ struct MobileAPITests {
         let remote = JourneyRemoteState.Day(
             dayNumber: bundled.dayNumber, title: "Edited title", hook: "", scriptureReference: "",
             scriptureText: "", scriptureAudioURL: nil, teachingVideoURL: "https://example.com/v.mp4",
-            exegesis: "  ", surrender: ""
+            exegesis: "  ", surrender: "", eveningPrompt: "Where did you notice mercy today?"
         )
         let merged = bundled.overlaid(remote)
         #expect(merged.title == "Edited title")
@@ -160,5 +160,18 @@ private extension BundledCurriculumSource {
     func loadDaysSync() throws -> [JourneyDay] {
         let url = try #require(Bundle.main.url(forResource: "SampleCurriculum", withExtension: "json"))
         return try JSONDecoder().decode([JourneyDay].self, from: Data(contentsOf: url))
+    }
+}
+
+@Suite("Widgets")
+struct WidgetTimelineTests {
+    @Test func lockScreenTakesTheFirstSentence() {
+        let verse = JourneySnapshot.lockScreenVerse(from: "Blessed are the meek, for they will inherit the earth. Blessed are those who hunger.")
+        #expect(verse == "Blessed are the meek, for they will inherit the earth.")
+    }
+
+    @Test func eveningPromptFallsBackWhenTheServerHasNone() throws {
+        let bundled = try #require(try BundledCurriculumSource().loadDaysSync().first)
+        #expect(bundled.eveningPrompt == nil)
     }
 }

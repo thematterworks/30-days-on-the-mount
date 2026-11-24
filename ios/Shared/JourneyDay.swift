@@ -17,6 +17,9 @@ struct JourneyDay: Codable, Identifiable, Hashable, Sendable {
     let teachingVideoURL: URL?
     let scriptureAudioURL: URL?
     let mediaURL: URL?
+    /// The evening check-in question. Comes from the server; the bundled
+    /// curriculum doesn't carry it.
+    var eveningPrompt: String? = nil
 
     var id: Int { dayNumber }
 

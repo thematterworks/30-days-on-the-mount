@@ -10,6 +10,26 @@ struct JourneySnapshot: Codable, Equatable, Sendable {
     var hookText: String
     var finishedToday: Bool
     var updatedAt: Date
+    /// The day's scripture, for the Lock Screen. Optional so snapshots saved
+    /// by earlier builds still decode.
+    var verse: String?
+    var verseReference: String?
+    var eveningPrompt: String?
+    /// Local hour the evening check-in arrives: the morning hour plus 11, as
+    /// the server's evening cron computes it.
+    var eveningHour: Int?
+
+    static let fallbackEveningPrompt = "How did today's practice meet you?"
+
+    /// The first sentence of the passage — what fits on a Lock Screen.
+    static func lockScreenVerse(from text: String) -> String {
+        var first = text
+        text.enumerateSubstrings(in: text.startIndex..., options: .bySentences) { sentence, _, _, stop in
+            if let sentence { first = sentence.trimmingCharacters(in: .whitespacesAndNewlines) }
+            stop = true
+        }
+        return first
+    }
 
     static let placeholder = JourneySnapshot(
         dayNumber: 1,
@@ -18,7 +38,11 @@ struct JourneySnapshot: Codable, Equatable, Sendable {
         practiceTitle: "Relinquishing the Right to be Right",
         hookText: "Go the entire day without defending yourself, explaining your actions, or justifying your opinions.",
         finishedToday: false,
-        updatedAt: .distantPast
+        updatedAt: .distantPast,
+        verse: "Blessed are the poor in spirit, for theirs is the kingdom of heaven.",
+        verseReference: "Matthew 5:3",
+        eveningPrompt: fallbackEveningPrompt,
+        eveningHour: 19
     )
 }
 

@@ -141,6 +141,8 @@ final class AppModel {
     /// The morning hour is where the server sends the day, so a change
     /// here moves delivery itself.
     func morningHourChanged(to hour: Int) {
+        // The evening widget moves with it.
+        journey.refreshWidgets()
         Task {
             do {
                 try await account.updateMorningHour(hour, timezone: TimeZone.current.identifier)

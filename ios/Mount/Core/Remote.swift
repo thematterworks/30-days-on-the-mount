@@ -211,6 +211,7 @@ struct JourneyRemoteState: Sendable {
         let teachingVideoURL: String?
         let exegesis: String
         let surrender: String
+        let eveningPrompt: String?
     }
 
     let currentDay: Int
@@ -235,7 +236,8 @@ extension JourneyDay {
             surrenderText: remote.surrender.isEmpty ? surrenderText : remote.surrender,
             teachingVideoURL: remote.teachingVideoURL.flatMap(URL.init(string:)) ?? teachingVideoURL,
             scriptureAudioURL: remote.scriptureAudioURL.flatMap(URL.init(string:)) ?? scriptureAudioURL,
-            mediaURL: mediaURL
+            mediaURL: mediaURL,
+            eveningPrompt: remote.eveningPrompt.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 } ?? eveningPrompt
         )
     }
 }

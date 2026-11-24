@@ -149,6 +149,10 @@ final class JourneyStore {
         publishSnapshot()
     }
 
+    /// Called when something the widgets show changes outside the journey,
+    /// such as the morning hour.
+    func refreshWidgets() { publishSnapshot() }
+
     /// Hands the widgets just what they render, then asks them to redraw.
     private func publishSnapshot() {
         guard let today else { return }
@@ -159,7 +163,11 @@ final class JourneyStore {
             practiceTitle: today.practiceTitle,
             hookText: today.hookText,
             finishedToday: progress.hasFinishedToday,
-            updatedAt: .now
+            updatedAt: .now,
+            verse: JourneySnapshot.lockScreenVerse(from: today.scriptureText),
+            verseReference: today.scriptureReference,
+            eveningPrompt: today.eveningPrompt,
+            eveningHour: (settings.morningHour + 11) % 24
         ))
         WidgetCenter.shared.reloadAllTimelines()
     }
