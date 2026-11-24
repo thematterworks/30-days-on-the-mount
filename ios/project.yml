@@ -17,12 +17,10 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
     TARGETED_DEVICE_FAMILY: "1"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
-    # Simulator builds sign ad hoc so the App Group and push entitlements are
-    # embedded without a team. Device and TestFlight builds need
-    # DEVELOPMENT_TEAM set and automatic signing — see ios/ARCHITECTURE.md.
-    CODE_SIGN_STYLE: Manual
-    "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]": "-"
-    DEVELOPMENT_TEAM: ""
+    # Automatic signing under The Matterworks team, so Xcode provisions the
+    # App Group, push and Live Activity entitlements for device builds.
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: LUX5PGSCA8
 
 targets:
   Mount:
