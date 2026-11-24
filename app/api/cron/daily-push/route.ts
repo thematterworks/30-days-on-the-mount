@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { env } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { isUnsubscribedRecipientError, sendPushToChannel } from "@/lib/messaging";
+import { deliverProgramMessage, isUnsubscribedRecipientError } from "@/lib/messaging";
 import { sendCurriculumEmail } from "@/lib/email";
 import { getEmailTheme } from "@/lib/system-config";
 import { cleanupExpiredMagicLinks, mintMagicLink } from "@/lib/participant-auth";
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
 
     const { data: curriculumDay } = await supabase
       .from("curriculum_days")
-      .select("template_name, title, fallback_text")
+      .select("template_name, title, fallback_text, hook_text")
       .eq("day_number", nextDay)
       .maybeSingle();
 
@@ -130,7 +130,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const result = await sendPushToChannel(user.channel, user.phone_number, curriculumDay.template_name, smsBody);
+    const result = await deliverProgramMessage({
+      user,
+      whatsappTemplateName: curriculumDay.template_name,
+      smsBody,
+      notification: {
+        title: `Day ${nextDay} · ${curriculumDay.title}`,
+        body: curriculumDay.hook_text?.trim() || "Today's invitation is waiting.",
+        link: `mount://day/${nextDay}`,
+        dayNumber: nextDay,
+        collapseId: `day-${nextDay}`,
+      },
+    });
 
     await supabase.from("message_logs").insert({
       phone_number: user.phone_number,
@@ -139,7 +150,7 @@ export async function GET(request: NextRequest) {
       message_body: `[template:${curriculumDay.template_name}]`,
       provider_message_id: result.messageId,
       status: result.ok ? "sent" : "failed",
-      channel: user.channel,
+      channel: result.channel,
     });
 
     if (!result.ok) {

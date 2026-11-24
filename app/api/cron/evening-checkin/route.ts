@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { env } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { isUnsubscribedRecipientError, sendPushToChannel } from "@/lib/messaging";
+import { deliverProgramMessage, isUnsubscribedRecipientError } from "@/lib/messaging";
 import { getEveningCheckinFallbackText, getEveningCheckinTemplateName } from "@/lib/system-config";
 import { DEFAULT_PREFERRED_HOUR, DEFAULT_TIMEZONE, getLocalDate, getLocalHour } from "@/lib/timezone";
 
@@ -103,7 +103,21 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
 
     const smsBody = curriculumDay?.evening_prompt_text?.trim() || genericFallbackText;
-    const result = await sendPushToChannel(user.channel, user.phone_number, templateName, smsBody);
+    const result = await deliverProgramMessage({
+      user,
+      whatsappTemplateName: templateName,
+      smsBody,
+      notification: {
+        title: `Day ${user.current_day} · Evening`,
+        body: smsBody,
+        link: "mount://companion",
+        dayNumber: user.current_day,
+        // The notification carries a reply field (NotificationCoordinator);
+        // the answer goes to the companion like a text would.
+        category: "EVENING_CHECK_IN",
+        collapseId: `evening-${user.current_day}`,
+      },
+    });
 
     await supabase.from("message_logs").insert({
       phone_number: user.phone_number,
@@ -112,7 +126,7 @@ export async function GET(request: NextRequest) {
       message_body: `[template:${templateName}]`,
       provider_message_id: result.messageId,
       status: result.ok ? "sent" : "failed",
-      channel: user.channel,
+      channel: result.channel,
     });
 
     if (result.ok) {

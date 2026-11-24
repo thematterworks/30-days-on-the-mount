@@ -3,6 +3,7 @@ import { sendFreeformTextMessage, sendTemplateMessage } from "@/lib/whatsapp";
 import { sendSmsMessage } from "@/lib/twilio";
 import type { MessageChannel } from "@/lib/supabase/types";
 import { timed } from "@/lib/timing";
+import { type AppNotification, sendAppNotification } from "@/lib/apns";
 
 export interface ChannelSendResult {
   ok: boolean;
@@ -81,4 +82,28 @@ export async function sendPushToChannel(
     return timed("send:twilio", () => sendSmsMessage(to, smsBody));
   }
   return timed("send:whatsapp", () => sendTemplateMessage(to, whatsappTemplateName));
+}
+
+/**
+ * Delivers a scheduled program message (the morning day, the evening
+ * check-in). The app comes first: a participant signed in on a phone that
+ * allows notifications gets a push, and nothing else. Anyone else gets their
+ * consented channel exactly as before — which, for someone who joined through
+ * the app, is nothing at all (see sendPushToChannel).
+ *
+ * `channel` in the result is where it actually went, for message_logs.
+ */
+export async function deliverProgramMessage(params: {
+  user: { phone_number: string; channel: MessageChannel };
+  whatsappTemplateName: string;
+  smsBody: string;
+  notification: AppNotification;
+}): Promise<ChannelSendResult & { channel: MessageChannel }> {
+  const { user } = params;
+  const pushed = await sendAppNotification(user.phone_number, params.notification);
+  if (pushed > 0) {
+    return { ok: true, messageId: null, error: null, channel: "app" };
+  }
+  const result = await sendPushToChannel(user.channel, user.phone_number, params.whatsappTemplateName, params.smsBody);
+  return { ...result, channel: user.channel };
 }
