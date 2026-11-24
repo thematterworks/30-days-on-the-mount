@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.scenePhase) private var scenePhase
     @Namespace private var zoom
 
     var body: some View {
@@ -18,6 +19,12 @@ struct RootView: View {
         .zoeAtmosphere()
         .task { await model.journey.load() }
         .task { await model.bible.load() }
+        // On sign-in, and whenever the app comes back: the morning may have
+        // turned over, or a reply arrived by text.
+        .task(id: model.session.session?.token) { await model.refresh() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await model.refresh() } }
+        }
         .fullScreenCover(item: $model.storyRoute) { route in
             if let day = model.journey.day(route.dayNumber) {
                 // The day's title grows into its story, and the story shrinks

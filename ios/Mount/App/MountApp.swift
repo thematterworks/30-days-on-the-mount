@@ -14,6 +14,9 @@ struct MountApp: App {
                 .onOpenURL { url in
                     if let link = DeepLink(url: url) { model.open(link) }
                 }
+                .task {
+                    appDelegate.onDeviceToken = { [model] token in model.didReceiveDeviceToken(token) }
+                }
         }
     }
 }

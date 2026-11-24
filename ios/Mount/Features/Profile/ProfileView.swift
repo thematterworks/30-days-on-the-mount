@@ -8,6 +8,8 @@ struct ProfileView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var confirmingDeletion = false
+    @State private var isDeleting = false
+    @State private var deletionError: String?
 
     var body: some View {
         @Bindable var settings = model.settings
@@ -37,6 +39,9 @@ struct ProfileView: View {
                 Section("Rhythm") {
                     Picker("Morning invitation", selection: $settings.morningHour) {
                         ForEach(5..<12, id: \.self) { hour in Text(Self.hourLabel(hour)).tag(hour) }
+                    }
+                    .onChange(of: settings.morningHour) { old, new in
+                        if old != new { model.morningHourChanged(to: new) }
                     }
                     Toggle("Evening check-in", isOn: $settings.eveningCheckIn)
                     Toggle("Live Activity for the day", isOn: $settings.liveActivities)
@@ -80,13 +85,20 @@ struct ProfileView: View {
                 .listRowBackground(rowBackground)
 
                 Section {
-                    Button("Sign out") {
-                        model.isProfilePresented = false
-                        model.session.signOut()
+                    Button("Sign out") { model.signOut() }
+                    Button(role: .destructive) {
+                        confirmingDeletion = true
+                    } label: {
+                        HStack {
+                            Text("Delete account")
+                            if isDeleting { Spacer(); ProgressView() }
+                        }
                     }
-                    Button("Delete account", role: .destructive) { confirmingDeletion = true }
+                    .disabled(isDeleting)
                 } footer: {
-                    if model.session.session?.isPreview == true {
+                    if let deletionError {
+                        Text(deletionError)
+                    } else if model.session.session?.isPreview == true {
                         Text("Preview build — your journey is stored on this device only.")
                     }
                 }
@@ -107,7 +119,16 @@ struct ProfileView: View {
                 titleVisibility: .visible
             ) {
                 Button("Delete account and journey", role: .destructive) {
-                    Task { await model.deleteAccountLocally() }
+                    Task {
+                        isDeleting = true
+                        deletionError = nil
+                        defer { isDeleting = false }
+                        do {
+                            try await model.deleteAccount()
+                        } catch {
+                            deletionError = "Your account wasn't deleted. \(error.localizedDescription)"
+                        }
+                    }
                 }
             } message: {
                 Text("Your progress, reflections, highlights and conversation will be permanently removed. This can't be undone.")

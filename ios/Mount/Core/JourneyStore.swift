@@ -19,14 +19,16 @@ final class JourneyStore {
     private(set) var reflections: [Int: SavedReflection]
 
     private let source: any CurriculumSource
+    private let service: (any JourneyService)?
     private let liveActivity: LiveActivityController
     private let settings: SettingsStore
     private static let progressKey = "journey.progress.v1"
     private static let reflectionsKey = "journey.reflections.v1"
     private static let dawnKey = "journey.lastDawnSeen.v1"
 
-    init(source: any CurriculumSource, liveActivity: LiveActivityController, settings: SettingsStore) {
+    init(source: any CurriculumSource, service: (any JourneyService)?, liveActivity: LiveActivityController, settings: SettingsStore) {
         self.source = source
+        self.service = service
         self.liveActivity = liveActivity
         self.settings = settings
         progress = SharedStore.defaults.data(forKey: Self.progressKey)
@@ -55,7 +57,35 @@ final class JourneyStore {
         } catch {
             loadError = error.localizedDescription
             Logger.app.error("Curriculum failed to load: \(error.localizedDescription, privacy: .public)")
+            return
         }
+        await sync()
+    }
+
+    /// Takes the server's word on where the participant is and on each open
+    /// day's content. The bundled curriculum stays the base — it is what
+    /// opens instantly and offline — and anything edited in the admin since
+    /// this build shipped is laid over it.
+    func sync() async {
+        guard let service else { return }
+        let remote: JourneyRemoteState
+        do {
+            remote = try await service.fetch()
+        } catch {
+            Logger.app.error("Journey sync failed: \(error.localizedDescription, privacy: .public)")
+            return
+        }
+
+        let updates = Dictionary(remote.days.map { ($0.dayNumber, $0) }, uniquingKeysWith: { _, last in last })
+        days = days.map { day in updates[day.dayNumber].map(day.overlaid) ?? day }
+
+        let currentDay = min(max(remote.currentDay, 1), max(totalDays, 1))
+        if currentDay != progress.currentDay {
+            // A new morning: yesterday's Live Activity has done its work.
+            if currentDay > progress.currentDay { await liveActivity.endAll() }
+            progress.currentDay = currentDay
+        }
+        persist()
     }
 
     /// The participant finished the day's guided story and carried the

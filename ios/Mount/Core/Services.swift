@@ -1,9 +1,9 @@
 import Foundation
 
-// The app's three seams to the outside world. Screens depend only on these
-// protocols; AppModel chooses the implementation. Today that is the Preview*
-// set below. The Remote* set talks to the mobile API described in
-// ios/ARCHITECTURE.md (Phase 2) and replaces them without touching a view.
+// The app's seams to the outside world. Screens depend only on these
+// protocols; AppModel chooses the implementation: the Remote* set in
+// Remote.swift, which talks to the mobile API, or the Preview* set below,
+// which runs entirely on-device for UI tests and simulator walkthroughs.
 
 // MARK: - Curriculum
 
@@ -57,8 +57,8 @@ protocol AuthService: Sendable {
     func verify(phoneNumber: String, code: String) async throws -> Session
 }
 
-/// Accepts any six-digit code and issues a local token, so the app is usable
-/// before /api/mobile/auth exists. Only ever constructed in DEBUG builds.
+/// Accepts any six-digit code and issues a local token. Only ever
+/// constructed in DEBUG builds launched with `-previewServices`.
 struct PreviewAuthService: AuthService {
     func requestCode(phoneNumber: String) async throws {
         try await Task.sleep(for: .milliseconds(500))
@@ -114,13 +114,13 @@ struct PreviewCompanionService: CompanionService {
         try await Task.sleep(for: .milliseconds(700))
         return CompanionMessage(
             author: .companion,
-            text: "Your companion will answer here once this build is connected to the journey server.",
+            text: "This is a preview build, running without the journey server — your companion answers in the full app.",
             dayNumber: dayNumber
         )
     }
 
     func inspect(reflection: String, dayNumber: Int) async throws -> String {
         try await Task.sleep(for: .milliseconds(700))
-        return "Once this build is connected to the journey server, a single question about what you wrote will appear here."
+        return "This is a preview build, running without the journey server. In the full app, a single question about what you wrote appears here."
     }
 }

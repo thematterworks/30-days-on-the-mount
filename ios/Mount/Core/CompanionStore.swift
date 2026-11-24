@@ -21,10 +21,14 @@ final class CompanionStore {
     func refresh() async {
         do {
             let remote = try await service.history()
-            if !remote.isEmpty {
-                messages = remote
-                persist()
-            }
+            guard !remote.isEmpty else { return }
+            // The server's thread is the record. What the device added since
+            // its last message (a reflection carried over from a day) stays
+            // until the next exchange reaches the server.
+            let lastRemote = remote.map(\.sentAt).max() ?? .distantPast
+            let remoteIDs = Set(remote.map(\.id))
+            messages = remote + messages.filter { !remoteIDs.contains($0.id) && $0.sentAt > lastRemote }
+            persist()
         } catch {
             Logger.app.error("Companion history failed: \(error.localizedDescription, privacy: .public)")
         }

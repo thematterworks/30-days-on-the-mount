@@ -129,3 +129,36 @@ struct BibleTests {
         #expect(ScriptureReference.parse(text, books: books) == nil)
     }
 }
+
+@Suite("Mobile API")
+struct MobileAPITests {
+    @Test func decodesPostgresTimestamps() throws {
+        struct Stamp: Decodable { let at: Date }
+        for raw in ["2026-11-24T07:52:17.774+00:00", "2026-11-24T07:52:17+00:00", "2026-11-24T07:52:17Z"] {
+            let stamp = try APIClient.decoder.decode(Stamp.self, from: Data(#"{"at":"\#(raw)"}"#.utf8))
+            #expect(Calendar(identifier: .gregorian).component(.year, from: stamp.at) == 2026)
+        }
+    }
+
+    @Test func serverContentOverlaysButNeverBlanksADay() throws {
+        let bundled = try #require(try BundledCurriculumSource().loadDaysSync().first)
+        let remote = JourneyRemoteState.Day(
+            dayNumber: bundled.dayNumber, title: "Edited title", hook: "", scriptureReference: "",
+            scriptureText: "", scriptureAudioURL: nil, teachingVideoURL: "https://example.com/v.mp4",
+            exegesis: "  ", surrender: ""
+        )
+        let merged = bundled.overlaid(remote)
+        #expect(merged.title == "Edited title")
+        #expect(merged.hookText == bundled.hookText)
+        #expect(merged.exegesisText == bundled.exegesisText)
+        #expect(merged.practiceTitle == bundled.practiceTitle)
+        #expect(merged.teachingVideoURL?.absoluteString == "https://example.com/v.mp4")
+    }
+}
+
+private extension BundledCurriculumSource {
+    func loadDaysSync() throws -> [JourneyDay] {
+        let url = try #require(Bundle.main.url(forResource: "SampleCurriculum", withExtension: "json"))
+        return try JSONDecoder().decode([JourneyDay].self, from: Data(contentsOf: url))
+    }
+}

@@ -89,7 +89,7 @@ struct OnboardingView: View {
                 }
 
                 #if DEBUG
-                if step == .code {
+                if step == .code, model.usesPreviewServices {
                     Text("Preview build: any six digits will sign you in.")
                         .zoeLabelStyle()
                 }
