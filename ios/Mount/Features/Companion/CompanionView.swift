@@ -26,7 +26,10 @@ struct CompanionView: View {
                             .foregroundStyle(Zoe.inkMuted)
                             .padding(.top, 40)
                     }
-                    ForEach(companion.messages) { message in
+                    ForEach(Array(companion.messages.enumerated()), id: \.element.id) { index, message in
+                        if let day = Self.dayBeginning(at: index, in: companion.messages) {
+                            DayDivider(day: day, title: model.journey.day(day)?.title)
+                        }
                         CompanionEntry(message: message)
                             .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: 10)), removal: .opacity))
                     }
@@ -49,6 +52,15 @@ struct CompanionView: View {
             composer(dayNumber: today?.dayNumber ?? model.journey.progress.currentDay)
         }
         .task { await companion.refresh() }
+    }
+
+    /// The day that begins at this message, if it's the first one written
+    /// on a new day. Messages without a day (from before the journey
+    /// started) don't start a section.
+    nonisolated static func dayBeginning(at index: Int, in messages: [CompanionMessage]) -> Int? {
+        guard let day = messages[index].dayNumber, day >= 1 else { return nil }
+        let previous = messages[..<index].last(where: { $0.dayNumber != nil })?.dayNumber
+        return previous == day ? nil : day
     }
 
     private func header(today: JourneyDay?) -> some View {
@@ -118,6 +130,26 @@ private struct CompanionEntry: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(.leading, 48)
         }
+    }
+}
+
+/// A faint marker where a new day began, so the conversation reads as a
+/// path: Day 1, what was said; Day 2, and on.
+private struct DayDivider: View {
+    let day: Int
+    let title: String?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Rectangle().fill(Zoe.locked).frame(height: 1)
+            Text(title.map { "Day \(day) · \($0)" } ?? "Day \(day)")
+                .zoeLabelStyle(Zoe.inkMuted.opacity(0.8))
+                .lineLimit(1)
+                .fixedSize()
+            Rectangle().fill(Zoe.locked).frame(height: 1)
+        }
+        .padding(.top, 10)
+        .accessibilityAddTraits(.isHeader)
     }
 }
 

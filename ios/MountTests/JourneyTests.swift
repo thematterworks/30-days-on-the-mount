@@ -175,3 +175,17 @@ struct WidgetTimelineTests {
         #expect(bundled.eveningPrompt == nil)
     }
 }
+
+@Suite("Companion")
+struct CompanionDividerTests {
+    @Test func marksTheFirstMessageOfEachDay() {
+        let messages = [
+            CompanionMessage(author: .participant, text: "before", dayNumber: nil),
+            CompanionMessage(author: .participant, text: "a", dayNumber: 1),
+            CompanionMessage(author: .companion, text: "b", dayNumber: 1),
+            CompanionMessage(author: .participant, text: "c", dayNumber: 3),
+        ]
+        let starts = messages.indices.map { CompanionView.dayBeginning(at: $0, in: messages) }
+        #expect(starts == [nil, 1, nil, 3])
+    }
+}

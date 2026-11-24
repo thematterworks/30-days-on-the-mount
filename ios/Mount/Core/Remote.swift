@@ -162,9 +162,12 @@ struct RemoteCompanionService: CompanionService {
         let role: CompanionMessage.Author
         let text: String
         let sentAt: Date
+        /// The day the message was written in, from the daily push that
+        /// opened it.
+        let dayNumber: Int?
 
         var companionMessage: CompanionMessage {
-            CompanionMessage(id: id, author: role, text: text, sentAt: sentAt, dayNumber: nil)
+            CompanionMessage(id: id, author: role, text: text, sentAt: sentAt, dayNumber: dayNumber)
         }
     }
 
