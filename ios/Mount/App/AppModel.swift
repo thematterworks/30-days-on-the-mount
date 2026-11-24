@@ -101,6 +101,10 @@ final class AppModel {
             }
         }
         isProfilePresented = arguments.contains("-previewProfile")
+        if let index = arguments.firstIndex(of: "-previewDay"), arguments.indices.contains(index + 1),
+           let day = Int(arguments[index + 1]) {
+            journey.setCurrentDayForPreview(day)
+        }
         #endif
 
         Self.current = self

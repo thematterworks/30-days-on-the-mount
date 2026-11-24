@@ -126,6 +126,12 @@ final class JourneyStore {
     }
 
     #if DEBUG
+    /// `-previewDay N`: starts a walkthrough partway through the journey.
+    func setCurrentDayForPreview(_ day: Int) {
+        progress.currentDay = max(1, day)
+        persist()
+    }
+
     /// Stands in for the morning push in preview builds, which have no server
     /// to advance current_day.
     func advanceDayForPreview() async {

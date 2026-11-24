@@ -149,6 +149,13 @@ private struct DayPage: View {
                         .multilineTextAlignment(.center)
                         .padding(.top, 28)
                         .padding(.horizontal, 40)
+                } else if state == .completed && !finished {
+                    // Grace over streaks: a day that passed unentered isn't
+                    // missed or failed. It waits.
+                    Text("The mountain is still here.")
+                        .font(.zoeSerif(.title3).italic())
+                        .foregroundStyle(Zoe.ink.opacity(0.8))
+                        .padding(.top, 28)
                 } else if state == .completed {
                     Text(day.scriptureReference)
                         .zoeLabelStyle()
@@ -159,7 +166,8 @@ private struct DayPage: View {
             Spacer(minLength: 40)
 
             action(state: state, finished: finished, hasReflection: reflection != nil)
-                .padding(.bottom, 48)
+                // Room beneath for the "Return to today" pill.
+                .padding(.bottom, 76)
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
@@ -180,7 +188,7 @@ private struct DayPage: View {
                 Button {
                     model.open(.day(day.dayNumber))
                 } label: {
-                    Text(state == .active ? (finished ? "Return to today" : "Enter") : "Revisit")
+                    Text(state == .active ? (finished ? "Return to today" : "Enter") : (finished ? "Revisit" : "Enter"))
                         .font(.zoeSerif(.title3))
                         .padding(.horizontal, 44)
                         .frame(minHeight: 52)
