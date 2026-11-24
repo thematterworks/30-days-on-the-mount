@@ -1,0 +1,42 @@
+{
+  "voices": [
+    {
+      "id": "gandhi",
+      "author": "Mahatma Gandhi",
+      "quote": "The message of Jesus, as I understand it, is contained in the Sermon on the Mount unadulterated and taken as a whole... It is that Sermon which has endeared Jesus to me. If we could erase all the rest of the Bible and leave only the Sermon on the Mount, we would still have all we need to know about how to live.",
+      "context": "Gandhi, a Hindu, drew heavily on the Sermon on the Mount to formulate Satyagraha (nonviolent resistance), which ultimately led to India's independence and inspired civil rights movements worldwide."
+    },
+    {
+      "id": "king",
+      "author": "Dr. Martin Luther King Jr.",
+      "quote": "It was the Sermon on the Mount, rather than a doctrine of passive resistance, that initially inspired the Negroes of Montgomery to dignified social action. It was Jesus of Nazareth that answered the glib injunction to 'resist not evil.'",
+      "context": "While King frequently noted that while Gandhi provided the operational mechanics for the civil rights movement, the Sermon on the Mount provided the moral and spiritual engine that made it possible."
+    },
+    {
+      "id": "vonnegut",
+      "author": "Kurt Vonnegut",
+      "quote": "If it weren't for the message of mercy and pity in Jesus' Sermon on the Mount, I wouldn't want to be a human being. I would just as soon be a rattlesnake.",
+      "context": "As a secular humanist and novelist, Vonnegut viewed the Sermon on the Mount as the ultimate, necessary antidote to the cruelty and violence of human nature, famously arguing that modern society needs the Beatitudes far more than the Ten Commandments."
+    },
+    {
+      "id": "tolstoy",
+      "author": "Leo Tolstoy",
+      "quote": "When I read the Sermon on the Mount, all that had been dark became clear to me; all that had seemed impossible became possible, and all that had seemed complex became simple.",
+      "context": "The legendary Russian novelist experienced a massive existential crisis that was only resolved when he read the Sermon on the Mount. It entirely shifted his worldview, leading him to write The Kingdom of God Is Within You, which later profoundly influenced Gandhi."
+    },
+    {
+      "id": "bonhoeffer",
+      "author": "Dietrich Bonhoeffer",
+      "quote": "Humanly speaking, it is possible to understand the Sermon on the Mount in a thousand different ways. But Jesus knows only one possibility: simple surrender and obedience, not interpreting it or applying it, but doing and obeying it.",
+      "context": "Writing from Nazi Germany, Bonhoeffer pushed back against the academic tendency to over-intellectualize the Sermon. He recognized it as a radical, physical call to action that required total ego-death, a conviction that eventually cost him his life."
+    },
+    {
+      "id": "stott",
+      "author": "John Stott",
+      "quote": "The Sermon on the Mount is probably the best-known part of the teaching of Jesus, though arguably it is the least understood, and certainly it is the least obeyed.",
+      "context": "Stott highlighted the paradox of the Sermon—it is universally admired by secular and religious cultures alike, yet its actual demands for radical downward mobility are rarely put into physical practice."
+    }
+  ],
+  "teachings": [],
+  "readings": []
+}

@@ -1,0 +1,103 @@
+# XcodeGen spec for the 30 Days on the Mount iOS app. The .xcodeproj is
+# generated from this file and not committed — edit here, then run:
+#   cd ios && xcodegen generate
+name: Mount
+options:
+  bundleIdPrefix: com.thematterworks
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    # Simulator builds sign ad hoc so the App Group and push entitlements are
+    # embedded without a team. Device and TestFlight builds need
+    # DEVELOPMENT_TEAM set and automatic signing — see ios/ARCHITECTURE.md.
+    CODE_SIGN_STYLE: Manual
+    "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]": "-"
+    DEVELOPMENT_TEAM: ""
+
+targets:
+  Mount:
+    type: application
+    platform: iOS
+    sources:
+      - path: Mount
+      - path: Shared
+    info:
+      path: Mount/Info.plist
+      properties:
+        # Home-screen label. "30 Days on the Mount" truncates there; the App
+        # Store name stays the full brand (it is set in App Store Connect).
+        CFBundleDisplayName: On the Mount
+        UILaunchScreen: {}
+        UIUserInterfaceStyle: Dark
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSSupportsLiveActivities: true
+        UIBackgroundModes: [remote-notification]
+        ITSAppUsesNonExemptEncryption: false
+        CFBundleURLTypes:
+          - CFBundleURLName: com.thematterworks.mount
+            CFBundleURLSchemes: [mount]
+    entitlements:
+      path: Mount/Mount.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.thematterworks.mount]
+        aps-environment: development
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.thematterworks.mount
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - target: MountWidgets
+
+  MountWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: MountWidgets
+      - path: Shared
+    info:
+      path: MountWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: On the Mount
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: MountWidgets/MountWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.thematterworks.mount]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.thematterworks.mount.widgets
+
+  MountTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: MountTests
+    dependencies:
+      - target: Mount
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.thematterworks.mount.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Mount.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Mount"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+schemes:
+  Mount:
+    build:
+      targets:
+        Mount: all
+        MountWidgets: all
+    test:
+      targets: [MountTests]
