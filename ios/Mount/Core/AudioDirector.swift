@@ -179,6 +179,20 @@ final class AudioDirector {
         }
     }
 
+    // MARK: Recording
+
+    /// The microphone would hear the music, so it rests while someone
+    /// speaks a reflection.
+    func pauseForRecording() {
+        stopSpeaking()
+        stopAmbient(fade: false)
+    }
+
+    func resumeAfterRecording() {
+        configureSession()
+        startAmbient()
+    }
+
     // MARK: Ducking
 
     /// Lowers the music while something meant to be listened to plays.

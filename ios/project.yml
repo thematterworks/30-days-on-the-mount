@@ -39,6 +39,8 @@ targets:
         UIUserInterfaceStyle: Dark
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSSupportsLiveActivities: true
+        NSMicrophoneUsageDescription: Speak a reflection or a message to your companion instead of typing it.
+        NSSpeechRecognitionUsageDescription: Your spoken words are turned into text on this iPhone, so you can speak a reflection instead of typing it.
         UIBackgroundModes: [remote-notification]
         ITSAppUsesNonExemptEncryption: false
         CFBundleURLTypes:

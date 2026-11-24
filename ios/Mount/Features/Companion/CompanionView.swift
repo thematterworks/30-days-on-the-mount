@@ -90,7 +90,11 @@ struct CompanionView: View {
                 .padding(.horizontal, 16)
                 .background(Zoe.ink.opacity(0.06), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
 
+            MicButton(field: "companion", text: $draft)
+                .padding(.bottom, 4)
+
             Button {
+                model.dictation.stop()
                 let text = draft
                 draft = ""
                 Task { await model.companion.send(text, dayNumber: dayNumber) }

@@ -28,6 +28,7 @@ final class AppModel {
     let liveActivity: LiveActivityController
     let audio: AudioDirector
     let avatar = AvatarStore()
+    @ObservationIgnored private(set) lazy var dictation = Dictation(audio: audio)
     /// The server can read aloud; listen buttons appear only when it can.
     private(set) var voiceAvailable = false
 

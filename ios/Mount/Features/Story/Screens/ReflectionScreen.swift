@@ -50,7 +50,16 @@ struct ReflectionScreen: View {
                     .frame(minHeight: 140, maxHeight: 220)
                     .padding(12)
                     .background(Zoe.ink.opacity(0.05), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Zoe.locked))
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(model.dictation.activeField == fieldID ? Zoe.peach.opacity(0.7) : Zoe.locked))
+                    .overlay(alignment: .bottomTrailing) {
+                        MicButton(field: fieldID, text: $text).padding(10)
+                    }
+                    .animation(.easeInOut, value: model.dictation.activeField)
+
+                if let problem = model.dictation.problem {
+                    Text(problem).font(.footnote).foregroundStyle(Zoe.inkMuted).multilineTextAlignment(.center)
+                }
 
                 if let errorMessage {
                     Text(errorMessage).font(.footnote).foregroundStyle(Zoe.peach)
@@ -80,9 +89,11 @@ struct ReflectionScreen: View {
     }
 
     private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var fieldID: String { "reflection-\(day.dayNumber)" }
 
     private func ask() {
         isWriting = false
+        model.dictation.stop()
         isAsking = true
         errorMessage = nil
         Task {

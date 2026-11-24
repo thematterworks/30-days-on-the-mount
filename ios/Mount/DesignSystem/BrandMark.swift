@@ -130,3 +130,36 @@ struct ListenButton: View {
         }
     }
 }
+
+/// Speak instead of type. Tap to start; words appear in the field as
+/// they're said; tap again to stop and edit.
+struct MicButton: View {
+    let field: String
+    @Binding var text: String
+    var size: CGFloat = 34
+
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        let dictation = model.dictation
+        let listening = dictation.activeField == field
+        Button {
+            if listening {
+                dictation.stop()
+            } else {
+                Task { await dictation.start(field: field, existing: text) { text = $0 } }
+            }
+        } label: {
+            Image(systemName: listening ? "waveform" : "mic")
+                .font(.system(size: size * 0.45, weight: .medium))
+                .symbolEffect(.variableColor.iterative, isActive: listening)
+                .foregroundStyle(listening ? Zoe.navy : Zoe.ink.opacity(0.8))
+                .frame(width: size, height: size)
+                .background(listening ? Zoe.peach : Zoe.ink.opacity(0.1), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .sensoryFeedback(.impact(weight: .light), trigger: listening)
+        .accessibilityLabel(listening ? "Stop speaking" : "Speak instead of typing")
+        .onDisappear { if listening { dictation.stop() } }
+    }
+}
