@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import OSLog
+import SwiftUI
 import UIKit
 import UserNotifications
 
@@ -32,6 +33,9 @@ final class AppModel {
     var selectedTab: HubTab = .journey
     var storyRoute: StoryRoute?
     var isProfilePresented = false
+    /// Whether this person has been through the welcome on this phone.
+    private(set) var hasBeenWelcomed = SharedStore.defaults.bool(forKey: AppModel.welcomedKey)
+    private static let welcomedKey = "welcome.completed.v1"
 
     /// True only for DEBUG launches running entirely on-device.
     let usesPreviewServices: Bool
@@ -83,6 +87,8 @@ final class AppModel {
         if arguments.contains("-previewSignedIn"), session.session == nil {
             session.signInForPreview()
         }
+        // Walkthroughs land in the hub unless they ask for the welcome.
+        if arguments.contains("-previewSignedIn") { hasBeenWelcomed = !arguments.contains("-previewWelcome") }
         // `-previewTab bible|companion|library` and `-previewProfile` open a
         // screen directly, for UI tests and simulator walkthroughs.
         if let index = arguments.firstIndex(of: "-previewTab"), arguments.indices.contains(index + 1) {
@@ -160,6 +166,14 @@ final class AppModel {
         }
     }
 
+    /// The welcome ends on Day 1 — or wherever someone already is.
+    func finishWelcome() {
+        SharedStore.defaults.set(true, forKey: Self.welcomedKey)
+        audio.stopSpeaking()
+        selectedTab = .journey
+        withAnimation(.easeInOut(duration: 1.2)) { hasBeenWelcomed = true }
+    }
+
     // MARK: Leaving
 
     /// Signs out and clears what this phone holds of the journey, so the
@@ -178,6 +192,9 @@ final class AppModel {
         storyRoute = nil
         journey.clearLocalData()
         companion.clearLocalData()
+        // The next person to sign in here deserves the welcome too.
+        SharedStore.defaults.removeObject(forKey: Self.welcomedKey)
+        hasBeenWelcomed = false
         session.signOut()
     }
 

@@ -10,6 +10,9 @@ struct RootView: View {
         Group {
             if model.session.session == nil {
                 OnboardingView()
+            } else if !model.hasBeenWelcomed {
+                WelcomeView()
+                    .transition(.opacity)
             } else if let error = model.journey.loadError {
                 ContentUnavailableView("The journey couldn't open", systemImage: "mountain.2", description: Text(error))
             } else {

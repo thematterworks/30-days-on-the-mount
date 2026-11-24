@@ -65,6 +65,10 @@ final class AudioDirector {
     init(media: any MediaService) {
         self.media = media
         isAmbientOn = SharedStore.defaults.object(forKey: Self.ambientKey) as? Bool ?? true
+        #if DEBUG
+        // Simulator walkthroughs stay silent on the developer's Mac.
+        if ProcessInfo.processInfo.arguments.contains("-silent") { isAmbientOn = false }
+        #endif
         trackIndex = Int.random(in: 0..<max(tracks.count, 1))
     }
 
