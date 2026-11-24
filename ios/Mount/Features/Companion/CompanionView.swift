@@ -60,6 +60,7 @@ struct CompanionView: View {
                 }
             }
             Spacer()
+            SoundToggle()
             AvatarButton()
         }
         .padding(.horizontal, 24)
@@ -100,11 +101,15 @@ private struct CompanionEntry: View {
     var body: some View {
         switch message.author {
         case .companion:
-            Text(message.text)
-                .font(.zoeSerif(.body))
-                .foregroundStyle(Zoe.ink)
-                .lineSpacing(5)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(message.text)
+                    .font(.zoeSerif(.body))
+                    .foregroundStyle(Zoe.ink)
+                    .lineSpacing(5)
+                ListenButton(text: message.text, id: "companion-\(message.id)", compact: true)
+                    .offset(x: -6)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         case .participant:
             Text(message.text)
                 .font(.body)

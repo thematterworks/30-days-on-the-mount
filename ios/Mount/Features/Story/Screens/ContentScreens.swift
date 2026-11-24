@@ -32,6 +32,7 @@ struct HookScreen: View {
 struct ScriptureScreen: View {
     let day: JourneyDay
     let isActive: Bool
+    @Environment(AppModel.self) private var model
     @State private var player: AVPlayer?
 
     var body: some View {
@@ -47,10 +48,13 @@ struct ScriptureScreen: View {
                 .arrival(isActive, order: 1)
             ReadInContextButton(reference: day.scriptureReference)
                 .arrival(isActive, order: 2)
+            // A recording made for the day wins; otherwise the app's voice
+            // reads it.
             if let audio = day.scriptureAudioURL {
                 Button {
                     if player == nil { player = AVPlayer(url: audio) }
                     player?.play()
+                    model.audio.duck("scripture-recording")
                 } label: {
                     Label("Listen", systemImage: "play.fill")
                         .zoeLabelStyle(Zoe.ink)
@@ -61,9 +65,17 @@ struct ScriptureScreen: View {
                 .buttonStyle(.plain)
                 .padding(.top, 8)
                 .arrival(isActive, order: 2)
+            } else {
+                ListenButton(text: "\(day.scriptureReference). \(day.scriptureText)", id: "day-\(day.dayNumber)-scripture")
+                    .arrival(isActive, order: 2)
             }
         }
-        .onChange(of: isActive) { _, active in if !active { player?.pause() } }
+        .onChange(of: isActive) { _, active in
+            guard !active else { return }
+            player?.pause()
+            model.audio.unduck("scripture-recording")
+            if model.audio.speakingID == "day-\(day.dayNumber)-scripture" { model.audio.stopSpeaking() }
+        }
     }
 }
 
@@ -91,6 +103,7 @@ private struct ReadInContextButton: View {
 struct TeachingScreen: View {
     let day: JourneyDay
     let isActive: Bool
+    @Environment(AppModel.self) private var model
     @State private var player: AVPlayer?
 
     var body: some View {
@@ -106,8 +119,17 @@ struct TeachingScreen: View {
         .onAppear {
             if player == nil, let url = day.teachingVideoURL { player = AVPlayer(url: url) }
         }
-        // Swiping away pauses, as VideoScreen.tsx does on the web.
-        .onChange(of: isActive) { _, active in if !active { player?.pause() } }
+        // The music steps back for the teacher, and swiping away pauses, as
+        // VideoScreen.tsx does on the web.
+        .onChange(of: isActive, initial: true) { _, active in
+            if active {
+                model.audio.duck("teaching")
+            } else {
+                player?.pause()
+                model.audio.unduck("teaching")
+            }
+        }
+        .onDisappear { model.audio.unduck("teaching") }
     }
 }
 
@@ -119,8 +141,12 @@ struct ExegesisScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Text("Going deeper").zoeLabelStyle()
-                    .arrival(isActive, order: 0)
+                HStack {
+                    Text("Going deeper").zoeLabelStyle()
+                    Spacer()
+                    ListenButton(text: day.exegesisText, id: "day-\(day.dayNumber)-exegesis", compact: true)
+                }
+                .arrival(isActive, order: 0)
                 ForEach(Array(day.exegesisParagraphs.enumerated()), id: \.offset) { position, paragraph in
                     Text(paragraph)
                         .font(.system(size: 18 * model.settings.readingScale, design: .serif))

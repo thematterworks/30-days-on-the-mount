@@ -65,6 +65,7 @@ struct BibleView: View {
             .task { await bible.load() }
             .onChange(of: bible.verses) { _, _ in
                 selection = []
+                if model.audio.speakingID?.hasPrefix("bible-") == true { model.audio.stopSpeaking() }
                 guard let focus = bible.focusVerse else {
                     // The heading, not the first verse — "Matthew / 5" is
                     // where a chapter begins.
@@ -103,6 +104,8 @@ struct BibleView: View {
 
             Spacer()
 
+            SoundToggle()
+
             Button { isSearching = true } label: {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(Zoe.ink)
@@ -121,12 +124,22 @@ struct BibleView: View {
     private var chapterHeading: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(model.bible.currentBook?.name ?? "").zoeLabelStyle(Zoe.peach)
-            Text("\(model.bible.location.chapter)")
-                .font(.zoeDisplay(72))
-                .foregroundStyle(Zoe.ink)
+            HStack(alignment: .lastTextBaseline) {
+                Text("\(model.bible.location.chapter)")
+                    .font(.zoeDisplay(72))
+                    .foregroundStyle(Zoe.ink)
+                Spacer()
+                ListenButton(text: chapterText, id: "bible-\(model.bible.title)", label: "Listen")
+            }
         }
         .padding(.top, 24)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
+    }
+
+    /// The chapter as it should sound: the heading, then each verse, with
+    /// no verse numbers read out.
+    private var chapterText: String {
+        "\(model.bible.title). " + model.bible.verses.map(\.text).joined(separator: " ")
     }
 
     private var chapterNavigation: some View {

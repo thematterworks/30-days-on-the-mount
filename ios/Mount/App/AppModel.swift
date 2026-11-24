@@ -25,6 +25,9 @@ final class AppModel {
     let settings: SettingsStore
     let notifications: NotificationCoordinator
     let liveActivity: LiveActivityController
+    let audio: AudioDirector
+    /// The server can read aloud; listen buttons appear only when it can.
+    private(set) var voiceAvailable = false
 
     var selectedTab: HubTab = .journey
     var storyRoute: StoryRoute?
@@ -59,6 +62,7 @@ final class AppModel {
             journey = JourneyStore(source: BundledCurriculumSource(), service: nil, liveActivity: liveActivity, settings: settings)
             companion = CompanionStore(service: PreviewCompanionService())
             account = PreviewAccountService()
+            audio = AudioDirector(media: PreviewMediaService())
         } else {
             // A 401 means the session can't be trusted any more; sign-in is
             // the only useful place to be.
@@ -69,6 +73,7 @@ final class AppModel {
             journey = JourneyStore(source: BundledCurriculumSource(), service: RemoteJourneyService(client: client), liveActivity: liveActivity, settings: settings)
             companion = CompanionStore(service: RemoteCompanionService(client: client))
             account = RemoteAccountService(client: client)
+            audio = AudioDirector(media: RemoteMediaService(client: client))
             // Sessions issued by earlier preview builds were never known to
             // the server.
             if session.session?.isPreview == true { session.signOut() }
@@ -112,9 +117,11 @@ final class AppModel {
         guard session.session != nil else { return }
         async let journeySync: Void = journey.sync()
         async let companionSync: Void = companion.refresh()
-        if let participant = try? await account.participant(),
-           let hour = participant.preferredHour, (5..<12).contains(hour) {
-            settings.morningHour = hour
+        if let participant = try? await account.participant() {
+            voiceAvailable = participant.features?.voice ?? false
+            if let hour = participant.preferredHour, (5..<12).contains(hour) {
+                settings.morningHour = hour
+            }
         }
         _ = await (journeySync, companionSync)
         await registerForPushIfAllowed()
@@ -166,6 +173,7 @@ final class AppModel {
             Task { try? await account.unregisterDevice(apnsToken: deviceToken) }
         }
         Task { await liveActivity.endAll() }
+        audio.stopSpeaking()
         isProfilePresented = false
         storyRoute = nil
         journey.clearLocalData()

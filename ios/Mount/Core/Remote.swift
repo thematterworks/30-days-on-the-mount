@@ -126,6 +126,12 @@ struct RemoteParticipant: Decodable, Sendable {
     let currentDay: Int
     let timezone: String
     let preferredHour: Int?
+    let features: Features?
+
+    struct Features: Decodable, Sendable {
+        /// The server can read aloud (ELEVENLABS_API_KEY is set).
+        let voice: Bool
+    }
 }
 
 // MARK: - Sign in
@@ -307,4 +313,35 @@ struct PreviewAccountService: AccountService {
     func registerDevice(apnsToken: String) async throws {}
     func unregisterDevice(apnsToken: String) async throws {}
     func deleteAccount() async throws {}
+}
+
+// MARK: - Media
+
+protocol MediaService: Sendable {
+    func ambientTracks() async throws -> [AudioDirector.Track]
+    /// A playable URL for `text` read aloud in the app's voice.
+    func speechURL(for text: String) async throws -> URL
+}
+
+struct RemoteMediaService: MediaService {
+    let client: APIClient
+
+    func ambientTracks() async throws -> [AudioDirector.Track] {
+        struct Response: Decodable { let tracks: [AudioDirector.Track] }
+        let response: Response = try await client.get("api/mobile/ambient")
+        return response.tracks
+    }
+
+    func speechURL(for text: String) async throws -> URL {
+        struct Response: Decodable { let url: URL }
+        let response: Response = try await client.send("POST", "api/mobile/speech", body: ["text": text])
+        return response.url
+    }
+}
+
+struct PreviewMediaService: MediaService {
+    func ambientTracks() async throws -> [AudioDirector.Track] { AudioDirector.fallbackTracks }
+    func speechURL(for text: String) async throws -> URL {
+        throw APIError.server("Reading aloud needs the journey server.")
+    }
 }

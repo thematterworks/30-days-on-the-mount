@@ -29,6 +29,7 @@ struct GuidedStoryView: View {
         }
         .background(ZoeAtmosphere(glow: glow(for: screens)))
         .animation(.easeInOut(duration: 0.6), value: index)
+        .onDisappear { model.audio.stopSpeaking() }
     }
 
     /// Only the first entry into today's story pauses at the threshold.
@@ -59,8 +60,9 @@ struct GuidedStoryView: View {
         .tabViewStyle(.page(indexDisplayMode: .never))
         .sensoryFeedback(.impact(weight: .light, intensity: 0.6), trigger: index)
         .safeAreaInset(edge: .top) {
-            HStack(spacing: 16) {
+            HStack(spacing: 12) {
                 StoryProgressBar(count: screens.count, index: index)
+                SoundToggle()
                 Button {
                     dismiss()
                 } label: {

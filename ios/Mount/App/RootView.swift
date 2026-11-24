@@ -22,8 +22,19 @@ struct RootView: View {
         // On sign-in, and whenever the app comes back: the morning may have
         // turned over, or a reply arrived by text.
         .task(id: model.session.session?.token) { await model.refresh() }
+        .task(id: model.session.session != nil) {
+            if model.session.session != nil { await model.audio.begin() }
+        }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await model.refresh() } }
+            switch phase {
+            case .active:
+                model.audio.enterForeground()
+                Task { await model.refresh() }
+            case .background:
+                model.audio.enterBackground()
+            default:
+                break
+            }
         }
         .fullScreenCover(item: $model.storyRoute) { route in
             if let day = model.journey.day(route.dayNumber) {

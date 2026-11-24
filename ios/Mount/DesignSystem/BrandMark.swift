@@ -51,11 +51,86 @@ struct HubHeader: View {
         ZStack {
             BrandMark(compact: true)
             HStack {
+                SoundToggle()
                 Spacer()
                 AvatarButton()
             }
         }
         .padding(.horizontal, 20)
         .padding(.top, 4)
+    }
+}
+
+/// The ambient music's one control: a small speaker, top left on every tab.
+/// Present but quiet — it should be findable, never noticed.
+struct SoundToggle: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        let audio = model.audio
+        Button {
+            audio.isAmbientOn.toggle()
+        } label: {
+            Image(systemName: audio.isAmbientOn ? "speaker.wave.2" : "speaker.slash")
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(audio.isAmbientOn ? Zoe.ink.opacity(0.75) : Zoe.inkMuted)
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 34, height: 34)
+                .zoeGlass(in: Circle())
+        }
+        .buttonStyle(.plain)
+        .sensoryFeedback(.selection, trigger: audio.isAmbientOn)
+        .accessibilityLabel(audio.isAmbientOn ? "Turn off ambient music" : "Turn on ambient music")
+    }
+}
+
+/// Reads a passage aloud in the app's voice. Hidden until the server can;
+/// tapping again stops.
+struct ListenButton: View {
+    let text: String
+    let id: String
+    var label = "Listen"
+    var compact = false
+
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        let audio = model.audio
+        let isThis = audio.speakingID == id
+        if model.voiceAvailable {
+            Button {
+                audio.toggleSpeaking(text, id: id)
+            } label: {
+                if compact {
+                    Group {
+                        if isThis && audio.isPreparingSpeech {
+                            ProgressView().controlSize(.mini).tint(Zoe.inkMuted)
+                        } else {
+                            Image(systemName: isThis ? "stop.fill" : "speaker.wave.2")
+                                .contentTransition(.symbolEffect(.replace))
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(isThis ? Zoe.peach : Zoe.inkMuted)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
+                } else {
+                    HStack(spacing: 8) {
+                        if isThis && audio.isPreparingSpeech {
+                            ProgressView().controlSize(.small).tint(Zoe.ink)
+                        } else {
+                            Image(systemName: isThis ? "stop.fill" : "play.fill")
+                        }
+                        Text(isThis ? "Stop" : label)
+                    }
+                    .zoeLabelStyle(Zoe.ink)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 10)
+                    .zoeGlass(in: Capsule())
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isThis ? "Stop reading aloud" : "\(label), read aloud")
+        }
     }
 }
