@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { verifyParticipantSessionToken } from "@/lib/participant-auth";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { isSpeechConfigured } from "@/lib/speech";
 import type { UserRow } from "@/lib/supabase/types";
 
 /**
@@ -103,5 +104,6 @@ export function participantPayload(user: UserRow) {
     timezone: user.timezone,
     preferredHour: user.preferred_delivery_hour,
     channel: user.channel,
+    features: { voice: isSpeechConfigured() },
   };
 }

@@ -13,34 +13,53 @@ const MAX_MESSAGE_LENGTH = 2000;
  * same message_logs thread the SMS engine writes — so someone who started by
  * text finds their history waiting in the app.
  */
-function toMessage(row: Pick<MessageLogRow, "id" | "direction" | "message_body" | "created_at" | "channel">) {
+function toMessage(
+  row: Pick<MessageLogRow, "id" | "direction" | "message_body" | "created_at" | "channel">,
+  dayNumber: number | null = null,
+) {
   return {
     id: row.id,
     role: row.direction === "inbound" ? "participant" : "companion",
     text: row.message_body,
     sentAt: row.created_at,
     channel: row.channel,
+    dayNumber,
   };
+}
+
+/** `[template:day_04_…]` → 4. Other templates (the evening check-in) carry no day. */
+function templateDay(body: string): number | null {
+  const match = /^\[template:day_(\d+)/.exec(body);
+  return match ? Number(match[1]) : null;
 }
 
 export async function GET(request: NextRequest) {
   const participant = await getMobileParticipant(request);
   if (!participant) return unauthorized();
 
-  // Templates are the daily curriculum pushes (logged as `[template:…]`),
-  // which the app shows as days, and failed rows are diagnostics for the
-  // admin inbox — neither belongs in the conversation.
+  // Failed rows are diagnostics for the admin inbox. Templates — the daily
+  // pushes, logged as `[template:day_NN_…]` — aren't shown, but they mark
+  // where each day began, so every message is labelled with the day it was
+  // written in. That is what lets the app set "Day 4" between entries.
   const { data, error } = await getSupabaseAdmin()
     .from("message_logs")
-    .select("id, direction, message_body, created_at, channel")
+    .select("id, direction, message_type, message_body, created_at, channel")
     .eq("phone_number", participant.phone_number)
-    .neq("message_type", "template")
     .neq("status", "failed")
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(260);
   if (error) return NextResponse.json({ error: "Couldn't load the conversation." }, { status: 500 });
 
-  return NextResponse.json({ messages: (data ?? []).reverse().map(toMessage) });
+  const messages = [];
+  let day: number | null = null;
+  for (const row of (data ?? []).reverse()) {
+    if (row.message_type === "template") {
+      day = templateDay(row.message_body) ?? day;
+      continue;
+    }
+    messages.push(toMessage(row, day));
+  }
+  return NextResponse.json({ messages: messages.slice(-200) });
 }
 
 /**
@@ -79,5 +98,7 @@ export async function POST(request: NextRequest) {
   if (replies.length > 0 && replies.every((row) => row.status === "failed")) {
     return NextResponse.json({ error: "The companion is quiet right now. Try again in a moment." }, { status: 502 });
   }
-  return NextResponse.json({ replies: replies.filter((row) => row.status !== "failed").map(toMessage) });
+  return NextResponse.json({
+    replies: replies.filter((row) => row.status !== "failed").map((row) => toMessage(row, participant.current_day)),
+  });
 }
