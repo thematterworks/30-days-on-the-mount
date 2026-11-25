@@ -27,8 +27,9 @@ final class AppModel {
     let notifications: NotificationCoordinator
     let liveActivity: LiveActivityController
     let audio: AudioDirector
-    let avatar = AvatarStore()
+    let avatar: AvatarStore
     @ObservationIgnored private(set) lazy var dictation = Dictation(audio: audio)
+    @ObservationIgnored private var appliedFocus: MountFocusState?
     /// The server can read aloud; listen buttons appear only when it can.
     private(set) var voiceAvailable = false
 
@@ -69,6 +70,7 @@ final class AppModel {
             companion = CompanionStore(service: PreviewCompanionService())
             account = PreviewAccountService()
             audio = AudioDirector(media: PreviewMediaService())
+            avatar = AvatarStore(service: PreviewAvatarService())
         } else {
             // A 401 means the session can't be trusted any more; sign-in is
             // the only useful place to be.
@@ -80,6 +82,7 @@ final class AppModel {
             companion = CompanionStore(service: RemoteCompanionService(client: client))
             account = RemoteAccountService(client: client)
             audio = AudioDirector(media: RemoteMediaService(client: client))
+            avatar = AvatarStore(service: RemoteAvatarService(client: client))
             // Sessions issued by earlier preview builds were never known to
             // the server.
             if session.session?.isPreview == true { session.signOut() }
@@ -107,6 +110,10 @@ final class AppModel {
             journey.setCurrentDayForPreview(day)
         }
         if arguments.contains("-previewSummit") { journey.reachSummitForPreview() }
+        if let index = arguments.firstIndex(of: "-previewStory"), arguments.indices.contains(index + 1),
+           let day = Int(arguments[index + 1]) {
+            storyRoute = StoryRoute(dayNumber: day)
+        }
         #endif
 
         Self.current = self
@@ -130,19 +137,24 @@ final class AppModel {
         guard session.session != nil else { return }
         async let journeySync: Void = journey.sync()
         async let companionSync: Void = companion.refresh()
+        async let avatarSync: Void = avatar.sync()
         if let participant = try? await account.participant() {
             voiceAvailable = participant.features?.voice ?? false
             if let hour = participant.preferredHour, (5..<12).contains(hour) {
                 settings.morningHour = hour
             }
         }
-        _ = await (journeySync, companionSync)
+        _ = await (journeySync, companionSync, avatarSync)
         await registerForPushIfAllowed()
     }
 
     /// The "On the Mount" Focus filter (FocusFilter.swift): while it's on,
     /// the app opens to today and keeps its music playing.
     func applyFocus(_ focus: MountFocusState = .load()) {
+        // Once per change of Focus: turning the music off while the Focus is
+        // on has to stick when the app comes back to the foreground.
+        guard focus != appliedFocus else { return }
+        appliedFocus = focus
         guard focus.isActive, session.session != nil, hasBeenWelcomed else { return }
         if focus.openToToday {
             storyRoute = nil

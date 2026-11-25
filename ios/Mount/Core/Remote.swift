@@ -224,13 +224,20 @@ struct JourneyRemoteState: Sendable {
 extension JourneyDay {
     /// This day with the server's content laid over it. Empty server fields
     /// keep the bundled text rather than blanking a screen.
+    /// The server's titles are written for texts ("Day 31: The Ongoing
+    /// Zoe"); the app shows the day number on its own, so the title drops it.
+    nonisolated static func bareTitle(_ title: String) -> String {
+        let bare = title.replacing(/^\s*Day\s+\d+\s*[:·\-–—]\s*/.ignoresCase(), with: "")
+        return bare.isEmpty ? title : bare
+    }
+
     func overlaid(_ remote: JourneyRemoteState.Day) -> JourneyDay {
         func pick(_ value: String, _ fallback: String) -> String {
             value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? fallback : value
         }
         return JourneyDay(
             dayNumber: dayNumber,
-            title: pick(remote.title, title),
+            title: Self.bareTitle(pick(remote.title, title)),
             hookText: pick(remote.hook, hookText),
             scriptureReference: pick(remote.scriptureReference, scriptureReference),
             scriptureText: pick(remote.scriptureText, scriptureText),
@@ -318,6 +325,46 @@ struct PreviewAccountService: AccountService {
     func registerDevice(apnsToken: String) async throws {}
     func unregisterDevice(apnsToken: String) async throws {}
     func deleteAccount() async throws {}
+}
+
+// MARK: - Avatar
+
+/// The profile icon as the server keeps it (app/api/mobile/avatar).
+struct RemoteAvatar: Codable, Sendable {
+    let kind: String
+    var symbol: String?
+    var tone: String?
+    var photoURL: URL?
+}
+
+protocol AvatarService: Sendable {
+    func avatar() async throws -> RemoteAvatar?
+    /// `photo` is a JPEG, sent when `kind` is "photo".
+    func save(_ avatar: RemoteAvatar, photo: Data?) async throws
+}
+
+struct RemoteAvatarService: AvatarService {
+    let client: APIClient
+
+    private struct Response: Decodable { let avatar: RemoteAvatar? }
+
+    func avatar() async throws -> RemoteAvatar? {
+        let response: Response = try await client.get("api/mobile/avatar")
+        return response.avatar
+    }
+
+    func save(_ avatar: RemoteAvatar, photo: Data?) async throws {
+        struct Body: Encodable { let kind: String; let symbol: String?; let tone: String?; let photo: String? }
+        let _: Response = try await client.send(
+            "PUT", "api/mobile/avatar",
+            body: Body(kind: avatar.kind, symbol: avatar.symbol, tone: avatar.tone, photo: photo?.base64EncodedString())
+        )
+    }
+}
+
+struct PreviewAvatarService: AvatarService {
+    func avatar() async throws -> RemoteAvatar? { nil }
+    func save(_ avatar: RemoteAvatar, photo: Data?) async throws {}
 }
 
 // MARK: - Media
