@@ -45,6 +45,10 @@ export type UserRow = {
   premium_granted_at: string | null;
   /** Local calendar date (YYYY-MM-DD, in the participant's timezone) of their most recent daily curriculum push. */
   last_push_on: string | null;
+  /** Local date of the last midday notification. */
+  midday_sent_on: string | null;
+  /** Whether they want the midday notification (Profile → Notifications). */
+  midday_invitations: boolean;
 };
 
 export type MagicLinkRow = {
@@ -76,6 +80,8 @@ export type CurriculumDayRow = {
   ai_guidance_prompt: string;
   media_url: string | null;
   evening_prompt_text: string;
+  morning_push_text: string;
+  midday_push_text: string;
   hook_text: string;
   scripture_reference: string;
   scripture_text: string;

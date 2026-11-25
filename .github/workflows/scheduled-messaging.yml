@@ -1,4 +1,4 @@
-# Hourly driver for the two messaging crons.
+# Hourly driver for the three messaging crons.
 #
 # These endpoints are NOT scheduled by Vercel. Both select recipients by each
 # participant's own preferred_delivery_hour evaluated in their own timezone, so
@@ -81,4 +81,16 @@ jobs:
             -H "Authorization: Bearer $CRON_SECRET" \
             "$BASE_URL/api/cron/evening-checkin")
           echo "HTTP $code"; cat /tmp/evening.json; echo
+          test "$code" = "200"
+
+      # App notifications only; never texts. See app/api/cron/midday.
+      - name: Midday invitation
+        if: always()
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          code=$(curl -sS -w '%{http_code}' -o /tmp/midday.json \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$BASE_URL/api/cron/midday")
+          echo "HTTP $code"; cat /tmp/midday.json; echo
           test "$code" = "200"

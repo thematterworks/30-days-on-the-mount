@@ -56,6 +56,8 @@ export function CurriculumDayDialog({
           fallback_text: form.fallback_text,
           ai_guidance_prompt: form.ai_guidance_prompt,
           evening_prompt_text: form.evening_prompt_text,
+          morning_push_text: form.morning_push_text,
+          midday_push_text: form.midday_push_text,
           hook_text: form.hook_text,
           scripture_reference: form.scripture_reference,
           scripture_text: form.scripture_text,
@@ -177,15 +179,45 @@ export function CurriculumDayDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="day-evening-prompt">Evening check-in prompt</Label>
-            <Textarea
-              id="day-evening-prompt"
-              rows={3}
-              value={form.evening_prompt_text}
-              onChange={(event) => setForm({ ...form, evening_prompt_text: event.target.value })}
-              placeholder="Sent as the full SMS body for this day's evening check-in. Leave blank to use the generic fallback. Has no effect on WhatsApp, which always sends the approved evening check-in template."
-            />
+          <div className="space-y-4 rounded-md border border-border p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Three a day</p>
+            <p className="text-xs text-muted-foreground">
+              The notifications for this day. Keep each to a sentence or two; the lock screen shows about 150
+              characters.
+            </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="day-morning-push">Morning: the theme, and one question</Label>
+              <Textarea
+                id="day-morning-push"
+                rows={2}
+                value={form.morning_push_text ?? ""}
+                onChange={(event) => setForm({ ...form, morning_push_text: event.target.value })}
+                placeholder="App notification when the day opens. Blank uses the hook text."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="day-midday-push">Midday: going deeper into the scripture</Label>
+              <Textarea
+                id="day-midday-push"
+                rows={2}
+                value={form.midday_push_text ?? ""}
+                onChange={(event) => setForm({ ...form, midday_push_text: event.target.value })}
+                placeholder="App notification only, never texted. Opens the teaching. Blank skips the midday notification."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="day-evening-prompt">Evening: how the practice went</Label>
+              <Textarea
+                id="day-evening-prompt"
+                rows={3}
+                value={form.evening_prompt_text}
+                onChange={(event) => setForm({ ...form, evening_prompt_text: event.target.value })}
+                placeholder="The evening app notification, and the full SMS body for this day's evening check-in. Blank uses the generic fallback."
+              />
+            </div>
           </div>
 
           <div className="space-y-4 rounded-md border border-border p-3">

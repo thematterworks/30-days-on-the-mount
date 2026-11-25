@@ -9,6 +9,8 @@ interface UpdateBody {
   fallback_text?: string;
   ai_guidance_prompt?: string;
   evening_prompt_text?: string;
+  morning_push_text?: string;
+  midday_push_text?: string;
   hook_text?: string;
   scripture_reference?: string;
   scripture_text?: string;
@@ -39,6 +41,8 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/admin/
     "fallback_text",
     "ai_guidance_prompt",
     "evening_prompt_text",
+    "morning_push_text",
+    "midday_push_text",
     "hook_text",
     "scripture_reference",
     "scripture_text",

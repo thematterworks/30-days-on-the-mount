@@ -107,6 +107,7 @@ export function participantPayload(user: UserRow) {
     preferredHour: user.preferred_delivery_hour,
     channel: user.channel,
     signInMethod: signInMethod(user.phone_number),
+    middayInvitations: user.midday_invitations ?? true,
     features: { voice: isSpeechConfigured(), voiceChat: isVoiceChatConfigured() },
   };
 }

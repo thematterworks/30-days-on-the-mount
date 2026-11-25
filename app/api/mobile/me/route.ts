@@ -15,7 +15,12 @@ export async function PATCH(request: NextRequest) {
   if (!participant) return unauthorized();
 
   const body = await readJson(request);
-  const changes: { first_name?: string | null; preferred_delivery_hour?: number; timezone?: string } = {};
+  const changes: {
+    first_name?: string | null;
+    preferred_delivery_hour?: number;
+    timezone?: string;
+    midday_invitations?: boolean;
+  } = {};
 
   if ("firstName" in body) {
     const name = typeof body.firstName === "string" ? body.firstName.trim().slice(0, 60) : "";
@@ -36,6 +41,10 @@ export async function PATCH(request: NextRequest) {
       return badRequest("Unknown timezone.");
     }
     changes.timezone = timezone;
+  }
+  if ("middayInvitations" in body) {
+    if (typeof body.middayInvitations !== "boolean") return badRequest("middayInvitations must be true or false.");
+    changes.midday_invitations = body.middayInvitations;
   }
   if (Object.keys(changes).length === 0) return NextResponse.json({ participant: participantPayload(participant) });
 

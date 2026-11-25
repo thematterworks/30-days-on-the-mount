@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { env } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { deliverProgramMessage, isUnsubscribedRecipientError } from "@/lib/messaging";
+import { bareDayTitle, deliverProgramMessage, isUnsubscribedRecipientError } from "@/lib/messaging";
 import { sendCurriculumEmail } from "@/lib/email";
 import { getEmailTheme } from "@/lib/system-config";
 import { cleanupExpiredMagicLinks, mintMagicLink } from "@/lib/participant-auth";
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
 
     const { data: curriculumDay } = await supabase
       .from("curriculum_days")
-      .select("template_name, title, fallback_text, hook_text")
+      .select("template_name, title, fallback_text, hook_text, morning_push_text")
       .eq("day_number", nextDay)
       .maybeSingle();
 
@@ -135,8 +135,8 @@ export async function GET(request: NextRequest) {
       whatsappTemplateName: curriculumDay.template_name,
       smsBody,
       notification: {
-        title: `Day ${nextDay} · ${curriculumDay.title}`,
-        body: curriculumDay.hook_text?.trim() || "Today's invitation is waiting.",
+        title: `Day ${nextDay} · ${bareDayTitle(curriculumDay.title)}`,
+        body: curriculumDay.morning_push_text?.trim() || curriculumDay.hook_text?.trim() || "Today's invitation is waiting.",
         link: `mount://day/${nextDay}`,
         dayNumber: nextDay,
         collapseId: `day-${nextDay}`,

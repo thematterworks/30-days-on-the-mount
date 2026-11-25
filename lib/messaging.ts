@@ -107,3 +107,12 @@ export async function deliverProgramMessage(params: {
   const result = await sendPushToChannel(user.channel, user.phone_number, params.whatsappTemplateName, params.smsBody);
   return { ...result, channel: user.channel };
 }
+
+/**
+ * "Day 31: The Ongoing Zoe" → "The Ongoing Zoe". The curriculum's titles are
+ * written for texts; a notification already names the day in its title.
+ */
+export function bareDayTitle(title: string): string {
+  const bare = title.replace(/^\s*Day\s+\d+\s*[:·\-–—]\s*/i, "");
+  return bare || title;
+}
