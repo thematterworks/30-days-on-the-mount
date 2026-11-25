@@ -1,13 +1,16 @@
 import "server-only";
 
 // Spoken conversations with the companion, through an ElevenLabs agent
-// (the Qara agent, shown in the app simply as "Companion"). The app never
+// (the "30 Days on the Mount" agent, shown in the app as "Companion"). The app never
 // holds the API key: it asks this server for a short-lived conversation
 // token, and the call itself runs between the phone and ElevenLabs.
 //
 // Requires ELEVENLABS_API_KEY with access to agents. Optional:
 // ELEVENLABS_AGENT_ID to use a different agent.
-const QARA_AGENT_ID = "agent_7301khydkzmrf8y88jctcd95a3eh";
+// Its voice is set to match the app's read-aloud: the same voice on the
+// steady Turbo v2 model, expressive mode off (that mode drifted the accent,
+// slowed the pace and wrote cues like "[warmly]"), speed 1.1.
+const COMPANION_AGENT_ID = "agent_1101m88yhb55fn6apxrc0xj70cec";
 
 function apiKey() {
   return process.env.ELEVENLABS_API_KEY?.trim() || process.env.QARA_ELEVENLABS_API_KEY?.trim() || "";
@@ -23,7 +26,7 @@ export class VoiceChatError extends Error {}
 export async function conversationToken(): Promise<string> {
   const key = apiKey();
   if (!key) throw new VoiceChatError("Talking with your companion isn't set up yet.");
-  const agentId = process.env.ELEVENLABS_AGENT_ID?.trim() || QARA_AGENT_ID;
+  const agentId = process.env.ELEVENLABS_AGENT_ID?.trim() || COMPANION_AGENT_ID;
   const response = await fetch(
     `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${encodeURIComponent(agentId)}`,
     { headers: { "xi-api-key": key } },
