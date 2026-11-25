@@ -1,76 +1,88 @@
 import SwiftUI
 
-/// Hold along the right edge of the journey and a slim timeline of the days
-/// fades in; slide to move through them, a light tick at each day, and let
-/// go to land there. Only the days that are open — the journey still can't
-/// be run ahead of.
+/// Hold along the right edge of the journey and a fine line of the days
+/// fades in; slide to move through them, a light tick at each day, and the
+/// page follows. Only the days that are open — the journey still can't be
+/// run ahead of.
 struct DayScrubber: View {
     /// The days that can be visited, in order.
     let days: [JourneyDay]
     let current: Int?
     let onSelect: (Int) -> Void
 
-    @State private var isScrubbing = false
-    @State private var scrubbed: Int?
+    /// Where the finger is while scrubbing; nil otherwise. Gesture state
+    /// resets itself when the touch ends *or is cancelled*, so the scrubber
+    /// can never be left open.
+    @GestureState private var touch: Touch?
+    @State private var startDay: Int?
+
+    private enum Touch: Equatable {
+        case held
+        case at(CGFloat)
+    }
 
     var body: some View {
         GeometryReader { proxy in
             let height = proxy.size.height
+            let active = activeIndex(in: height)
             ZStack(alignment: .trailing) {
-                if isScrubbing, let scrubbed, let index = days.firstIndex(where: { $0.dayNumber == scrubbed }) {
-                    let y = position(of: index, in: height)
-                    track(height: height, active: index)
-                    label(days[index])
-                        .position(x: proxy.size.width - 120, y: y)
-                        .transition(.opacity)
+                if let active {
+                    track(height: height, active: active)
+                    label(days[active])
+                        .position(x: proxy.size.width - 70, y: position(of: active, in: height))
                 }
                 // The edge that answers a long press.
                 Color.clear
-                    .frame(width: 28)
+                    .frame(width: 26)
                     .contentShape(Rectangle())
-                    .gesture(scrub(height: height))
+                    .gesture(scrub)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-            .animation(.easeOut(duration: 0.25), value: isScrubbing)
+            .animation(.easeOut(duration: 0.2), value: touch == nil)
+            .onChange(of: active) { _, index in
+                guard let index else { return }
+                onSelect(days[index].dayNumber)
+            }
+            .sensoryFeedback(.selection, trigger: active)
         }
-        .sensoryFeedback(.selection, trigger: scrubbed)
-        .sensoryFeedback(.impact(weight: .light), trigger: isScrubbing) { _, new in new }
+        .onChange(of: touch == nil) { _, ended in
+            if !ended { startDay = current ?? days.last?.dayNumber }
+        }
         .accessibilityHidden(true)
     }
 
-    private func scrub(height: CGFloat) -> some Gesture {
+    private var scrub: some Gesture {
         LongPressGesture(minimumDuration: 0.25)
             .sequenced(before: DragGesture(minimumDistance: 0))
-            .onChanged { value in
+            .updating($touch) { value, state, _ in
                 switch value {
                 case .first(true):
-                    begin()
+                    state = .held
                 case .second(true, let drag):
-                    begin()
-                    if let drag, let day = day(at: drag.location.y, in: height), day != scrubbed {
-                        scrubbed = day
-                        // The page follows the finger, so each day is seen in passing.
-                        onSelect(day)
-                    }
+                    state = drag.map { .at($0.location.y) } ?? .held
                 default:
-                    break
+                    state = nil
                 }
             }
-            .onEnded { _ in
-                isScrubbing = false
-                scrubbed = nil
-            }
     }
 
-    private func begin() {
-        guard !isScrubbing else { return }
-        isScrubbing = true
-        if scrubbed == nil { scrubbed = current ?? days.last?.dayNumber }
+    /// The day under the finger — or, held but not yet moved, the day the
+    /// scrub began on.
+    private func activeIndex(in height: CGFloat) -> Int? {
+        guard let touch, !days.isEmpty else { return nil }
+        switch touch {
+        case .held:
+            return days.firstIndex { $0.dayNumber == (startDay ?? current) } ?? days.indices.last
+        case .at(let y):
+            let (top, length) = bounds(height)
+            let fraction = min(max((y - top) / max(length, 1), 0), 1)
+            return Int((fraction * CGFloat(days.count - 1)).rounded())
+        }
     }
 
-    /// The track runs down the middle 70% of the edge.
+    /// The line runs down the middle 64% of the edge.
     private func bounds(_ height: CGFloat) -> (top: CGFloat, length: CGFloat) {
-        (height * 0.15, height * 0.7)
+        (height * 0.18, height * 0.64)
     }
 
     private func position(of index: Int, in height: CGFloat) -> CGFloat {
@@ -79,43 +91,45 @@ struct DayScrubber: View {
         return top + length * CGFloat(index) / CGFloat(days.count - 1)
     }
 
-    private func day(at y: CGFloat, in height: CGFloat) -> Int? {
-        guard !days.isEmpty else { return nil }
-        let (top, length) = bounds(height)
-        let fraction = min(max((y - top) / max(length, 1), 0), 1)
-        let index = Int((fraction * CGFloat(days.count - 1)).rounded())
-        return days[index].dayNumber
-    }
-
+    /// A hairline with a fine tick for each day. The chosen day's tick
+    /// widens, and its neighbours swell a little with nearness — a ripple
+    /// that follows the finger.
     private func track(height: CGFloat, active: Int) -> some View {
-        ZStack(alignment: .top) {
-            Capsule()
-                .fill(Zoe.ink.opacity(0.12))
-                .frame(width: 4, height: bounds(height).length + 16)
-                .offset(y: bounds(height).top - 8)
+        ZStack(alignment: .topTrailing) {
+            Rectangle()
+                .fill(Zoe.ink.opacity(0.14))
+                .frame(width: 1, height: bounds(height).length)
+                .offset(x: -8, y: bounds(height).top)
             ForEach(days.indices, id: \.self) { index in
+                let swell = max(0, 1 - Double(abs(index - active)) / 3)
                 Capsule()
-                    .fill(index == active ? Zoe.peach : Zoe.ink.opacity(index < active ? 0.55 : 0.3))
-                    .frame(width: index == active ? 14 : 6, height: index == active ? 4 : 2)
-                    .offset(y: position(of: index, in: height) - 1)
+                    .fill(index == active ? Zoe.peach : Zoe.ink.opacity(0.25 + 0.3 * swell))
+                    .frame(width: 3 + 9 * swell, height: index == active ? 2 : 1)
+                    .offset(x: -8, y: position(of: index, in: height))
+                    .animation(.spring(duration: 0.25, bounce: 0.2), value: active)
             }
         }
-        .frame(width: 28, height: height, alignment: .top)
+        .frame(width: 26, height: height, alignment: .topTrailing)
         .transition(.opacity)
     }
 
+    /// Small and quiet: the day, and its title in fine type.
     private func label(_ day: JourneyDay) -> some View {
-        VStack(alignment: .trailing, spacing: 2) {
-            Text("Day \(day.dayNumber)").font(.zoeDisplay(26)).foregroundStyle(Zoe.peach)
+        VStack(alignment: .trailing, spacing: 0) {
+            Text("Day \(day.dayNumber)")
+                .font(.zoeSerif(.subheadline))
+                .foregroundStyle(Zoe.peach)
             Text(day.title)
-                .font(.zoeSerif(.footnote))
-                .foregroundStyle(Zoe.ink)
+                .font(.system(size: 10))
+                .foregroundStyle(Zoe.inkMuted)
                 .lineLimit(1)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .frame(width: 180, alignment: .trailing)
-        .zoeGlass(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(Zoe.deep.opacity(0.35), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .fixedSize()
+        .frame(width: 110, alignment: .trailing)
+        .transition(.opacity)
     }
 }
 
