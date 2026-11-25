@@ -11,25 +11,23 @@ struct ShareJourneyCard: View {
 
     var body: some View {
         let day = model.journey.progress.currentDay
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Share the journey").font(.zoeDisplay(30)).foregroundStyle(Zoe.ink)
-                    Text("Someone in your life could use thirty quiet mornings with the words of Jesus. Walking it together changes it.")
-                        .font(.zoeSerif(.subheadline))
-                        .foregroundStyle(Zoe.ink.opacity(0.85))
-                        .lineSpacing(3)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 8)
-                Image("MountainLine")
-                    .resizable()
-                    .renderingMode(.template)
-                    .scaledToFit()
-                    .frame(width: 56)
-                    .foregroundStyle(Zoe.peach.opacity(0.8))
-                    .padding(.top, 6)
+        VStack(spacing: 12) {
+            Image("MountainLine")
+                .resizable()
+                .renderingMode(.template)
+                .scaledToFit()
+                .frame(width: 52)
+                .foregroundStyle(Zoe.peach.opacity(0.8))
+            VStack(spacing: 4) {
+                Text("Share the journey").font(.zoeSerif(.title3)).foregroundStyle(Zoe.ink)
+                Text("Thirty quiet mornings with the words of Jesus are better walked together.")
+                    .font(.subheadline)
+                    .foregroundStyle(Zoe.ink.opacity(0.85))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxWidth: .infinity)
 
             ShareLink(
                 item: Self.link,
@@ -38,14 +36,14 @@ struct ShareJourneyCard: View {
                 preview: SharePreview("Walk the Sermon on the Mount with me", image: card ?? Image("MountainLine"))
             ) {
                 Label("Invite someone", systemImage: "paperplane")
-                    .font(.zoeSerif(.headline))
-                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 42)
                     .background(Zoe.peach, in: Capsule())
                     .foregroundStyle(Zoe.deep)
             }
             .buttonStyle(.plain)
         }
-        .padding(18)
+        .padding(16)
         .background(
             LinearGradient(colors: [Zoe.peach.opacity(0.16), Zoe.peach.opacity(0.04)], startPoint: .topLeading, endPoint: .bottomTrailing),
             in: RoundedRectangle(cornerRadius: 24, style: .continuous)

@@ -10,74 +10,57 @@ struct DayScrubber: View {
     let current: Int?
     let onSelect: (Int) -> Void
 
-    /// Where the finger is while scrubbing; nil otherwise. Gesture state
-    /// resets itself when the touch ends *or is cancelled*, so the scrubber
-    /// can never be left open.
-    @GestureState private var touch: Touch?
-    @State private var startDay: Int?
-
-    private enum Touch: Equatable {
-        case held
-        case at(CGFloat)
-    }
+    /// The day under the finger while scrubbing; nil otherwise.
+    @State private var active: Int?
+    /// Where the hold began, and the day it began on: until the finger moves,
+    /// the scrub stays on that day.
+    @State private var origin: (y: CGFloat, index: Int)?
 
     var body: some View {
         GeometryReader { proxy in
             let height = proxy.size.height
-            let active = activeIndex(in: height)
             ZStack(alignment: .trailing) {
-                if let active {
+                if let active, days.indices.contains(active) {
                     track(height: height, active: active)
                     label(days[active])
                         .position(x: proxy.size.width - 70, y: position(of: active, in: height))
+                        .animation(.snappy(duration: 0.18), value: active)
                 }
-                // The edge that answers a long press.
+                // The edge that answers a hold. A native long-press: it
+                // tracks the finger once recognised, and always reports its
+                // end — lifted, cancelled or interrupted — so the scrubber
+                // can't be left open.
                 Color.clear
-                    .frame(width: 26)
+                    .frame(width: 30)
                     .contentShape(Rectangle())
-                    .gesture(scrub)
+                    .gesture(EdgeHold { y in update(y, height: height) })
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-            .animation(.easeOut(duration: 0.2), value: touch == nil)
-            .onChange(of: active) { _, index in
-                guard let index else { return }
-                onSelect(days[index].dayNumber)
-            }
-            .sensoryFeedback(.selection, trigger: active)
-        }
-        .onChange(of: touch == nil) { _, ended in
-            if !ended { startDay = current ?? days.last?.dayNumber }
+            .animation(.easeOut(duration: 0.2), value: active == nil)
         }
         .accessibilityHidden(true)
     }
 
-    private var scrub: some Gesture {
-        LongPressGesture(minimumDuration: 0.25)
-            .sequenced(before: DragGesture(minimumDistance: 0))
-            .updating($touch) { value, state, _ in
-                switch value {
-                case .first(true):
-                    state = .held
-                case .second(true, let drag):
-                    state = drag.map { .at($0.location.y) } ?? .held
-                default:
-                    state = nil
-                }
-            }
-    }
-
-    /// The day under the finger — or, held but not yet moved, the day the
-    /// scrub began on.
-    private func activeIndex(in height: CGFloat) -> Int? {
-        guard let touch, !days.isEmpty else { return nil }
-        switch touch {
-        case .held:
-            return days.firstIndex { $0.dayNumber == (startDay ?? current) } ?? days.indices.last
-        case .at(let y):
-            let (top, length) = bounds(height)
-            let fraction = min(max((y - top) / max(length, 1), 0), 1)
-            return Int((fraction * CGFloat(days.count - 1)).rounded())
+    private func update(_ y: CGFloat?, height: CGFloat) {
+        guard let y, !days.isEmpty else {
+            active = nil
+            origin = nil
+            return
         }
+        guard let origin else {
+            let start = days.firstIndex { $0.dayNumber == current } ?? days.count - 1
+            self.origin = (y, start)
+            active = start
+            return
+        }
+        // Held but not yet moved: the day it began on.
+        guard abs(y - origin.y) > 6 else { return }
+        let (top, length) = bounds(height)
+        let fraction = min(max((y - top) / max(length, 1), 0), 1)
+        let index = Int((fraction * CGFloat(days.count - 1)).rounded())
+        guard index != active else { return }
+        active = index
+        onSelect(days[index].dayNumber)
     }
 
     /// The line runs down the middle 64% of the edge.
@@ -104,10 +87,10 @@ struct DayScrubber: View {
                     .frame(width: size, height: size)
                     .frame(width: 12, height: 12)
                     .offset(x: -4, y: position(of: index, in: height) - 6)
-                    .animation(.spring(duration: 0.25, bounce: 0.25), value: active)
             }
         }
         .frame(width: 26, height: height, alignment: .topTrailing)
+        .animation(.snappy(duration: 0.2), value: active)
         .transition(.opacity)
     }
 
@@ -128,6 +111,29 @@ struct DayScrubber: View {
         .fixedSize()
         .frame(width: 110, alignment: .trailing)
         .transition(.opacity)
+    }
+}
+
+/// A press held on the edge, then followed: the finger's height while held,
+/// nil once it ends for any reason.
+private struct EdgeHold: UIGestureRecognizerRepresentable {
+    let onChange: (CGFloat?) -> Void
+
+    func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
+        let recognizer = UILongPressGestureRecognizer()
+        recognizer.minimumPressDuration = 0.18
+        // A little drift while pressing is still a hold, not a scroll.
+        recognizer.allowableMovement = 16
+        return recognizer
+    }
+
+    func handleUIGestureRecognizerAction(_ recognizer: UILongPressGestureRecognizer, context: Context) {
+        switch recognizer.state {
+        case .began, .changed:
+            onChange(context.converter.localLocation.y)
+        default:
+            onChange(nil)
+        }
     }
 }
 

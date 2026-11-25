@@ -1,116 +1,142 @@
 import SwiftUI
 
-/// Profile → Together: the participant's name, and their walking companions —
-/// small groups taking the days together, with friends or matched strangers.
-struct TogetherSection: View {
+/// What Profile → Community shows and opens: the participant's groups,
+/// their place in line for matching, and which sheet is up. Kept apart from
+/// the section itself, because a Form only lays a section out as rows when
+/// nothing (sheets, tasks) is attached to it.
+@MainActor
+@Observable
+final class CommunityState {
+    var groups: [WalkingGroup] = []
+    var match: MatchStatus?
+    var isStarting = false
+    var isMatching = false
+    var joinCode: String?
+    var openGroup: WalkingGroup?
+
+    func refresh(_ model: AppModel) async {
+        async let loadedGroups = model.together.groups()
+        async let loadedMatch = model.together.matchStatus()
+        if let loaded = try? await loadedGroups { groups = loaded }
+        if let loaded = try? await loadedMatch { match = loaded }
+    }
+}
+
+/// Profile → Community: walking groups, with friends or matched strangers.
+struct CommunitySection: View {
+    @Bindable var state: CommunityState
     @Environment(AppModel.self) private var model
-    @State private var groups: [WalkingGroup] = []
-    @State private var match: MatchStatus?
-    @State private var name = ""
-    @State private var isStarting = false
-    @State private var isMatching = false
-    @State private var joinCode: String?
-    @State private var openGroup: WalkingGroup?
 
     var body: some View {
         Section {
-            HStack {
-                Text("Your first name")
-                Spacer()
-                TextField("Add your name", text: $name)
-                    .multilineTextAlignment(.trailing)
-                    .textContentType(.givenName)
-                    .submitLabel(.done)
-                    .onSubmit { model.updateFirstName(name) }
-                    .foregroundStyle(Zoe.ink)
-            }
-            ForEach(groups) { group in
-                Button { openGroup = group } label: { GroupRow(group: group) }
+            ForEach(state.groups) { group in
+                Button { state.openGroup = group } label: { GroupRow(group: group) }
                     .foregroundStyle(Zoe.ink)
             }
             matchRow
-            Button("Start a group with friends", systemImage: "person.2") { isStarting = true }
-            Button("Join with an invitation", systemImage: "envelope.open") { joinCode = "" }
+            row("Start a group with friends", symbol: "person.2") { state.isStarting = true }
+            row("Join with an invitation", symbol: "envelope.open") { state.joinCode = "" }
         } header: {
-            Text("Together")
+            Text("Community")
         } footer: {
-            Text("Walk the days with a few others: a private conversation for your group, screened with care. Start one with friends, or be matched with people on nearby days.")
+            Text("Walk the days with a few others. Everything shared is read with care before anyone sees it.")
         }
-        .task { await refresh() }
-        .onChange(of: model.pendingInvite, initial: true) { _, code in
-            if let code {
-                joinCode = code
-                model.pendingInvite = nil
+    }
+
+    private func row(_ title: String, symbol: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label {
+                Text(title).foregroundStyle(Zoe.ink)
+            } icon: {
+                Image(systemName: symbol).foregroundStyle(Zoe.peach).frame(width: 30)
             }
-        }
-        .onChange(of: model.pendingGroup, initial: true) { _, id in
-            guard let id else { return }
-            model.pendingGroup = nil
-            Task {
-                await refresh()
-                openGroup = groups.first { $0.id == id }
-            }
-        }
-        .onChange(of: openGroup) { _, group in
-            // Back from a conversation: its unread count has changed.
-            if group == nil { Task { await refresh() } }
-        }
-        .navigationDestination(item: $openGroup) { group in
-            GroupChatView(group: group) { groups.removeAll { $0.id == group.id } }
-        }
-        .sheet(isPresented: $isStarting) {
-            StartGroupSheet { groups = $0 }
-        }
-        .sheet(isPresented: $isMatching) {
-            MatchSheet(termsAccepted: match?.termsAccepted ?? false) { status, updated, groupID in
-                match = status
-                groups = updated
-                if let groupID {
-                    // Once the sheet has gone, so the push isn't lost in its dismissal.
-                    Task {
-                        try? await Task.sleep(for: .milliseconds(600))
-                        openGroup = updated.first { $0.id == groupID }
-                    }
-                }
-            }
-        }
-        .sheet(item: Binding(get: { joinCode.map(JoinRequest.init) }, set: { joinCode = $0?.code })) { request in
-            JoinGroupSheet(code: request.code) { groups = $0 }
         }
     }
 
     @ViewBuilder
     private var matchRow: some View {
-        switch match?.state {
+        switch state.match?.state {
         case .waiting:
             VStack(alignment: .leading, spacing: 6) {
-                Label("Finding your walking companions…", systemImage: "person.3")
-                    .foregroundStyle(Zoe.ink)
-                Text("We're gathering a few people on nearby days. You'll get a notification when your group is ready.")
+                Label {
+                    Text("Finding your walking companions…").foregroundStyle(Zoe.ink)
+                } icon: {
+                    ProgressView().controlSize(.small)
+                }
+                Text("You'll get a notification when your group is ready.")
                     .font(.caption)
                     .foregroundStyle(Zoe.inkMuted)
                 Button("Stop looking") {
-                    Task { match = try? await model.together.cancelMatch() }
+                    Task { state.match = try? await model.together.cancelMatch() }
                 }
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Zoe.peach)
                 .buttonStyle(.plain)
-                .padding(.top, 2)
             }
             .padding(.vertical, 4)
         case .none?:
-            Button("Find walking companions", systemImage: "person.3") { isMatching = true }
+            row("Find walking companions", symbol: "person.3") { state.isMatching = true }
         case .blocked?, nil:
             EmptyView()
         }
     }
+}
 
-    private func refresh() async {
-        name = model.firstName ?? name
-        async let loadedGroups = model.together.groups()
-        async let loadedMatch = model.together.matchStatus()
-        if let loaded = try? await loadedGroups { groups = loaded }
-        if let loaded = try? await loadedMatch { match = loaded }
+extension View {
+    /// The Community section's loading, links and sheets — attached to the
+    /// whole Profile form rather than the section.
+    func communityPresentations(_ state: CommunityState) -> some View {
+        modifier(CommunityPresentations(state: state))
+    }
+}
+
+private struct CommunityPresentations: ViewModifier {
+    @Bindable var state: CommunityState
+    @Environment(AppModel.self) private var model
+
+    func body(content: Content) -> some View {
+        content
+            .task { await state.refresh(model) }
+            .onChange(of: model.pendingInvite, initial: true) { _, code in
+                if let code {
+                    state.joinCode = code
+                    model.pendingInvite = nil
+                }
+            }
+            .onChange(of: model.pendingGroup, initial: true) { _, id in
+                guard let id else { return }
+                model.pendingGroup = nil
+                Task {
+                    await state.refresh(model)
+                    state.openGroup = state.groups.first { $0.id == id }
+                }
+            }
+            .onChange(of: state.openGroup) { _, group in
+                // Back from a conversation: its unread count has changed.
+                if group == nil { Task { await state.refresh(model) } }
+            }
+            .navigationDestination(item: $state.openGroup) { group in
+                GroupChatView(group: group) { state.groups.removeAll { $0.id == group.id } }
+            }
+            .sheet(isPresented: $state.isStarting) {
+                StartGroupSheet { state.groups = $0 }
+            }
+            .sheet(isPresented: $state.isMatching) {
+                MatchSheet(termsAccepted: state.match?.termsAccepted ?? false) { status, updated, groupID in
+                    state.match = status
+                    state.groups = updated
+                    if let groupID {
+                        // Once the sheet has gone, so the push isn't lost in its dismissal.
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(600))
+                            state.openGroup = updated.first { $0.id == groupID }
+                        }
+                    }
+                }
+            }
+            .sheet(item: Binding(get: { state.joinCode.map(JoinRequest.init) }, set: { state.joinCode = $0?.code })) { request in
+                JoinGroupSheet(code: request.code) { state.groups = $0 }
+            }
     }
 }
 

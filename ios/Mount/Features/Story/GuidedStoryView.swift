@@ -3,9 +3,10 @@ import SwiftUI
 /// A day's guided story: the same six screens, in the same order, as
 /// components/journey/GuidedStory.tsx — Hook, Scripture, Teaching, Exegesis,
 /// Reflection, Surrender — swiped through vertically, a card at a time, like
-/// the welcome tour (and YouVersion's guided scripture). A long card — the
-/// teaching — scrolls through its full text, its mark on the edge filling as
-/// it's read, and swipes on to the next card at its end (StorySnapping.swift).
+/// the welcome tour (and YouVersion's guided scripture), with the very same
+/// paging. A long card — the teaching — scrolls through its full text within
+/// itself, its mark on the edge filling as it's read; pulling on past its end
+/// turns to the next card (StoryPage).
 ///
 /// Entering *today's* story for the first time begins at the threshold: a few
 /// breaths before the reading, which can be stepped past at any moment.
@@ -16,11 +17,10 @@ struct GuidedStoryView: View {
 
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
-    @State private var scroll = ScrollPosition(idType: Int.self)
-    @State private var heights: [Int: CGFloat] = [:]
-    @State private var viewport: CGFloat = 0
-    @State private var offset: CGFloat = 0
-    @State private var dragStart: CGFloat = 0
+    @State private var page: Int? = 0
+    /// How far through the current card the reader is — kept apart so a
+    /// scroll redraws only the marks, not every card.
+    @State private var reading = StoryReading()
     @State private var hasCrossed = false
 
     var body: some View {
@@ -41,13 +41,8 @@ struct GuidedStoryView: View {
         .onDisappear { model.audio.stopSpeaking() }
     }
 
-    private func layout(_ count: Int) -> StoryLayout {
-        StoryLayout(heights: (0..<count).map { heights[$0] ?? viewport }, viewport: viewport)
-    }
-
-    /// The card filling most of the screen — judged from a little above the
-    /// middle, so a card begins arriving as it snaps in, not after.
-    private var index: Int { layout(StoryScreen.screens(for: day).count).card(at: offset + viewport * 0.4) }
+    /// The card on screen.
+    private var index: Int { page ?? 0 }
 
     /// `-previewStoryCard N` opens at a card, for walkthroughs.
     private static var startingCard: Int {
@@ -110,31 +105,33 @@ struct GuidedStoryView: View {
     }
 
     private func cards(_ screens: [StoryScreen]) -> some View {
-        let layout = layout(screens.count)
-        return ScrollView(.vertical) {
-            VStack(spacing: 0) {
+        // The welcome's paging exactly: a card a screen, native paging, the
+        // same fade between cards.
+        ScrollView(.vertical) {
+            LazyVStack(spacing: 0) {
                 ForEach(Array(screens.enumerated()), id: \.element) { position, screen in
-                    content(for: screen, isActive: index == position)
-                        // Clear of the home indicator.
-                        .padding(.top, 16)
-                        .padding(.bottom, 40)
-                        .frame(maxWidth: .infinity)
-                        // At least a screen tall; a long card is as tall as
-                        // its text.
-                        .frame(minHeight: viewport)
-                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { heights[position] = $0 }
-                        .id(position)
+                    StoryPage(isActive: index == position, reading: reading) { direction in
+                        turn(by: direction, count: screens.count)
+                    } content: {
+                        content(for: screen, isActive: index == position)
+                            // Clear of the home indicator.
+                            .padding(.top, 16)
+                            .padding(.bottom, 40)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .containerRelativeFrame([.horizontal, .vertical])
+                    .scrollTransition(.interactive, axis: .vertical) { view, phase in
+                        view
+                            .opacity(phase.isIdentity ? 1 : 0.15)
+                            .blur(radius: phase.isIdentity ? 0 : 5)
+                    }
+                    .id(position)
                 }
             }
             .scrollTargetLayout()
         }
-        .scrollTargetBehavior(StorySnapping(layout: layout, dragStart: dragStart))
-        .onScrollPhaseChange { _, phase in
-            if phase == .interacting { dragStart = offset }
-        }
-        .scrollPosition($scroll)
-        .onScrollGeometryChange(for: CGFloat.self) { $0.containerSize.height } action: { _, height in viewport = height }
-        .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, y in offset = y }
+        .scrollTargetBehavior(.paging)
+        .scrollPosition(id: $page)
         .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.immediately)
         .ignoresSafeArea(edges: .bottom)
@@ -145,8 +142,6 @@ struct GuidedStoryView: View {
                 LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom).frame(height: 56)
                 Color.black
             }
-            // Text fades as it scrolls up beneath the buttons.
-            .padding(.top, 0)
         }
         .environment(\.briskArrivals, true)
         .sensoryFeedback(.impact(flexibility: .rigid, intensity: 0.75), trigger: index)
@@ -156,16 +151,22 @@ struct GuidedStoryView: View {
             if Self.startingCard > 0 { start = Self.startingCard }
             #endif
             guard start > 0 else { return }
-            // Once the cards have been measured.
-            try? await Task.sleep(for: .milliseconds(250))
-            scroll.scrollTo(id: start, anchor: .top)
+            await Task.yield()
+            page = start
         }
         .overlay(alignment: .trailing) {
-            SceneMarks(count: screens.count, index: index, progress: layout.progress(of: index, at: offset))
+            StoryMarks(count: screens.count, index: index, reading: reading)
                 .padding(.trailing, 14)
                 .accessibilityElement()
                 .accessibilityLabel("Card \(index + 1) of \(screens.count)")
         }
+    }
+
+    /// Turns from a long card read to its end (or pulled back past its top).
+    private func turn(by direction: Int, count: Int) {
+        let next = min(max(index + direction, 0), count - 1)
+        guard next != index else { return }
+        withAnimation(.smooth(duration: 0.45)) { page = next }
     }
 
     @ViewBuilder
@@ -178,6 +179,81 @@ struct GuidedStoryView: View {
         case .reflection: ReflectionScreen(day: day, isActive: isActive)
         case .together: WalkingWithOthersScreen(day: day, isActive: isActive)
         case .surrender: SurrenderScreen(day: day, isActive: isActive)
+        }
+    }
+}
+
+/// How far the reader is through the card on screen, 0 to 1.
+@MainActor
+@Observable
+final class StoryReading {
+    var progress: Double = 1
+}
+
+/// The marks on the edge, reading the progress themselves so a scroll
+/// redraws only them.
+private struct StoryMarks: View {
+    let count: Int
+    let index: Int
+    let reading: StoryReading
+
+    var body: some View {
+        SceneMarks(count: count, index: index, progress: reading.progress)
+    }
+}
+
+/// One card, a screen tall. A card that fits sits still, and a swipe turns
+/// it like a page of the welcome. A card longer than the screen scrolls
+/// within itself; pulling past its end turns to the next card, and past its
+/// top, back to the one before.
+private struct StoryPage<Content: View>: View {
+    let isActive: Bool
+    let reading: StoryReading
+    let onTurn: (Int) -> Void
+    @ViewBuilder let content: Content
+
+    @State private var position = Position()
+    @State private var pullAtRelease: CGFloat = 0
+
+    /// How far past an end the reader pulls before the card turns.
+    private static var turnDistance: CGFloat { 64 }
+
+    struct Position: Equatable {
+        var offset: CGFloat = 0
+        var maxOffset: CGFloat = 0
+        /// Past the end (positive) or the top (negative).
+        var pull: CGFloat { offset < 0 ? offset : max(offset - maxOffset, 0) }
+        var progress: Double { maxOffset > 0 ? Double(min(max(offset / maxOffset, 0), 1)) : 1 }
+    }
+
+    var body: some View {
+        ViewThatFits(in: .vertical) {
+            content
+                .frame(maxHeight: .infinity)
+                .onChange(of: isActive, initial: true) { _, active in
+                    if active { reading.progress = 1 }
+                }
+            ScrollView(.vertical) { content }
+                .scrollIndicators(.hidden)
+                .onScrollGeometryChange(for: Position.self) { geometry in
+                    Position(
+                        offset: geometry.contentOffset.y + geometry.contentInsets.top,
+                        maxOffset: max(geometry.contentSize.height + geometry.contentInsets.top + geometry.contentInsets.bottom - geometry.containerSize.height, 0)
+                    )
+                } action: { _, new in
+                    position = new
+                    pullAtRelease = abs(new.pull) > abs(pullAtRelease) ? new.pull : pullAtRelease
+                    if isActive { reading.progress = new.progress }
+                }
+                .onScrollPhaseChange { old, new in
+                    if new == .interacting { pullAtRelease = 0 }
+                    if old == .interacting, new != .interacting {
+                        if pullAtRelease > Self.turnDistance { onTurn(1) } else if pullAtRelease < -Self.turnDistance { onTurn(-1) }
+                    }
+                }
+                .onChange(of: isActive, initial: true) { _, active in
+                    if active { reading.progress = position.progress }
+                }
         }
     }
 }

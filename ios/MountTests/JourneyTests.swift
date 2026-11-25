@@ -81,36 +81,6 @@ struct CurriculumTests {
     }
 }
 
-@Suite("Story scrolling")
-struct StoryLayoutTests {
-    // Three cards on an 800-point screen: short, a 2,000-point article, short.
-    let layout = StoryLayout(heights: [800, 2000, 800], viewport: 800)
-
-    @Test func shortCardsSnapOneAtATime() {
-        #expect(layout.rest(from: 0, proposed: 300) == 800)
-        #expect(layout.rest(from: 0, proposed: 60) == 0)
-    }
-
-    @Test func anArticleScrollsFreely() {
-        #expect(layout.rest(from: 800, proposed: 1500) == 1500)
-    }
-
-    @Test func aFlickStopsAtTheArticlesEndThenMovesOn() {
-        #expect(layout.rest(from: 1500, proposed: 2600) == 2000)
-        #expect(layout.rest(from: 2000, proposed: 2300) == 2800)
-    }
-
-    @Test func comingBackUpLandsAtTheArticlesEnd() {
-        #expect(layout.rest(from: 2800, proposed: 2500) == 2000)
-    }
-
-    @Test func progressFillsThroughTheArticle() {
-        #expect(layout.card(at: 1400) == 1)
-        #expect(layout.progress(of: 1, at: 1400) == 0.5)
-        #expect(layout.progress(of: 0, at: 0) == 1)
-    }
-}
-
 @Suite("Bundled Bible")
 struct BibleTests {
     @Test func hasTheWholeCanonInOrder() async throws {

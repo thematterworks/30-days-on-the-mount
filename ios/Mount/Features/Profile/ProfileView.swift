@@ -11,6 +11,9 @@ struct ProfileView: View {
     @State private var isChoosingIcon = false
     @State private var isDeleting = false
     @State private var deletionError: String?
+    @State private var community = CommunityState()
+    @State private var name = ""
+    @FocusState private var isEditingName: Bool
 
     var body: some View {
         @Bindable var settings = model.settings
@@ -31,7 +34,7 @@ struct ProfileView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Change profile icon")
-                        Text(formattedPhone).font(.zoeSerif(.headline)).foregroundStyle(Zoe.ink)
+                        nameField
                         HStack(spacing: 28) {
                             stat("\(journey.progress.currentDay)", "of \(max(journey.totalDays, 1)) days")
                             stat("\(journey.progress.finishedStories.count)", "carried")
@@ -50,7 +53,7 @@ struct ProfileView: View {
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
 
-                TogetherSection()
+                CommunitySection(state: community)
                     .listRowBackground(rowBackground)
 
                 Section("Rhythm") {
@@ -138,6 +141,8 @@ struct ProfileView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .communityPresentations(community)
+            .onAppear { name = model.firstName ?? "" }
             .sheet(isPresented: $isChoosingIcon) { AvatarPicker() }
             .confirmationDialog(
                 "Delete your account?",
@@ -176,17 +181,35 @@ struct ProfileView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private var formattedPhone: String {
-        switch model.session.session?.signInMethod {
-        case "apple": return "Signed in with Apple"
-        case "email": return "Signed in with email"
-        default: break
+    /// The participant's first name, under their icon — tap to change it.
+    /// It's the name others see in Community.
+    private var nameField: some View {
+        HStack(spacing: 6) {
+            TextField("Add your name", text: $name)
+                .font(.zoeSerif(.title2))
+                .foregroundStyle(Zoe.ink)
+                .multilineTextAlignment(.center)
+                .textContentType(.givenName)
+                .submitLabel(.done)
+                .focused($isEditingName)
+                .fixedSize()
+                .onSubmit(saveName)
+            if !isEditingName {
+                Image(systemName: "pencil")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Zoe.inkMuted)
+                    .onTapGesture { isEditingName = true }
+            }
         }
-        guard let digits = model.session.session?.phoneNumber, digits.count == 11, digits.hasPrefix("1") else {
-            return model.session.session?.phoneNumber ?? ""
+        .onChange(of: isEditingName) { _, editing in
+            if !editing { saveName() }
         }
-        let d = Array(digits.dropFirst())
-        return "(\(String(d[0..<3]))) \(String(d[3..<6]))-\(String(d[6..<10]))"
+    }
+
+    private func saveName() {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard trimmed != (model.firstName ?? "") else { return }
+        model.updateFirstName(trimmed)
     }
 
     private static func hourLabel(_ hour: Int) -> String {
