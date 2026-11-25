@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createGroup, displayNameFor, groupsFor } from "@/lib/community";
 import { badRequest, getMobileParticipant, readJson, unauthorized } from "@/lib/mobile";
+import { postingBlockedReason, standingOf } from "@/lib/standing";
 
 /** The participant's walking-companion groups. */
 export async function GET(request: NextRequest) {
@@ -14,6 +15,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const participant = await getMobileParticipant(request);
   if (!participant) return unauthorized();
+  if (standingOf(participant).status === "removed") {
+    return NextResponse.json({ error: postingBlockedReason(participant) }, { status: 403 });
+  }
   const body = await readJson(request);
   const name = typeof body.name === "string" ? body.name.trim() : "";
   if (!name) return badRequest("Give your group a name.");

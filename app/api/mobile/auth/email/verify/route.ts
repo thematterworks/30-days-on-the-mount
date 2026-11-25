@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { badRequest, participantPayload, readJson } from "@/lib/mobile";
+import { badRequest, participantPayload, readJson, suspended } from "@/lib/mobile";
 import { accountKey, canonicalEmail, consumeSignInCode, ensureParticipant } from "@/lib/mobile-accounts";
 import { createParticipantSessionToken } from "@/lib/participant-auth";
 
@@ -19,5 +19,6 @@ export async function POST(request: NextRequest) {
   if (!participant) {
     return NextResponse.json({ error: "Sign-in is unavailable right now. Please try again." }, { status: 500 });
   }
+  if (participant.community_status === "suspended") return suspended();
   return NextResponse.json({ token: await createParticipantSessionToken(key), participant: participantPayload(participant) });
 }

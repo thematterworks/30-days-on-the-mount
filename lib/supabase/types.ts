@@ -56,6 +56,47 @@ export type UserRow = {
   /** Their personal Share-the-journey link: /i/CODE. */
   invite_code: string | null;
   invite_opens: number;
+  /** Community standing (lib/standing.ts). */
+  community_status: "active" | "paused" | "removed" | "suspended";
+  community_paused_until: string | null;
+  community_notice: string | null;
+  /** "A word about me", on their member card. */
+  about: string | null;
+};
+
+export type CommunityStrikeRow = {
+  id: string;
+  phone_number: string;
+  post_id: string | null;
+  guideline: string;
+  note: string | null;
+  source: string;
+  severity: "standard" | "severe";
+  revoked_at: string | null;
+  created_at: string;
+};
+
+export type ModerationActionRow = {
+  id: string;
+  phone_number: string | null;
+  post_id: string | null;
+  action: string;
+  note: string | null;
+  actor: string;
+  created_at: string;
+};
+
+/** A photo, video or voice message with a group post. */
+export type PostMedia = {
+  kind: "image" | "video" | "audio";
+  path: string;
+  thumbPath?: string;
+  /** A video's frames, laid out in one image, for the screen. */
+  framesPath?: string;
+  duration?: number;
+  width?: number;
+  height?: number;
+  transcript?: string;
 };
 
 export type MagicLinkRow = {
@@ -119,6 +160,7 @@ export type CommunityPostRow = {
   group_id: string | null;
   moderation_note: string | null;
   report_count: number;
+  media: PostMedia | null;
 };
 
 export type WalkingGroupRow = {
@@ -264,6 +306,18 @@ export type Database = {
         Row: WalkingMatchRequestRow;
         Insert: Partial<WalkingMatchRequestRow> & { phone_number: string };
         Update: Partial<WalkingMatchRequestRow>;
+        Relationships: [];
+      };
+      community_strikes: {
+        Row: CommunityStrikeRow;
+        Insert: Partial<CommunityStrikeRow> & { phone_number: string; guideline: string };
+        Update: Partial<CommunityStrikeRow>;
+        Relationships: [];
+      };
+      moderation_actions: {
+        Row: ModerationActionRow;
+        Insert: Partial<ModerationActionRow> & { action: string };
+        Update: Partial<ModerationActionRow>;
         Relationships: [];
       };
       community_reports: {

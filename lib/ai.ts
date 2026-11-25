@@ -384,27 +384,75 @@ Decide one of:
 - distress: any sign the writer may be in danger — thoughts of suicide or self-harm, abuse, or a crisis. Choose this even if the post is also otherwise fine.
 - reject: spam, hate, harassment, sexual content, or content meant to harm.
 
-Reply with JSON only: {"decision": "approve" | "review" | "distress" | "reject", "note": "<a few words why>"}`;
+For reject, also name the guideline it breaks — kindness (harassment, insults, contempt), hate, sexual, violence (threats, glorifying harm), privacy (someone else's private details or story), contact (contact details, moving people elsewhere), spam (selling, fundraising, promotion), honesty (impersonation) — and set "severe": true for threats of violence, any sexual content or advances, hate, exposing someone's private information, or any attempt to exploit someone.
+
+Reply with JSON only: {"decision": "approve" | "review" | "distress" | "reject", "note": "<a few words why>", "guideline": "<key, for reject>", "severe": false}`;
 
 /** Added for groups of strangers the app matched together. */
 const STRANGERS_ADDENDUM = `
 
-This post is for a small group of adults who were matched as strangers. Keep them safe from each other: reject anything that shares or asks for contact details (phone numbers, emails, addresses, social media handles, other apps) or arranges to meet or talk privately elsewhere, with the note "contact details". Romantic or flirtatious advances are "reject" too.`;
+This post is for a small group of adults who were matched as strangers. Keep them safe from each other: reject anything that shares or asks for contact details (phone numbers, emails, addresses, social media handles, other apps) or arranges to meet or talk privately elsewhere, with the note "contact details" and guideline "contact". Romantic or flirtatious advances are "reject" too, guideline "sexual".`;
 
 /**
  * Screens a community post before anyone else sees it. When the screen
  * itself fails, the post waits for a person ("review") rather than going
  * up unseen.
  */
-export async function moderateCommunityPost(
-  text: string,
+const MEDIA_ADDENDUM = `
+
+This post includes media. Judge the images too (each is a photo, or frames from a video): nudity or sexual content, violence or gore, hate symbols, someone else's private information, and contact details, handles or QR codes visible in the picture all count. A transcript of any voice message or video's sound is included; judge it like the writing. Ordinary photos — nature, a Bible open on a table, a coffee, a family moment, a face — are fine.`;
+
+/**
+ * Screens a post that carries a photo, video frames or a voice message,
+ * with the same decisions as moderateCommunityPost.
+ */
+export async function moderateCommunityMedia(
+  params: { text: string; images: Buffer[]; transcript?: string },
   options: { strangers?: boolean } = {},
-): Promise<{ decision: ModerationDecision; note: string }> {
+): Promise<ModerationResult> {
+  const content: Anthropic.ContentBlockParam[] = params.images.slice(0, 4).map((image) => ({
+    type: "image",
+    source: { type: "base64", media_type: "image/jpeg", data: image.toString("base64") },
+  }));
+  content.push({
+    type: "text",
+    text: [
+      params.text ? `Caption: ${params.text}` : "No caption.",
+      params.transcript ? `Transcript of the recording: ${params.transcript}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+  });
   try {
-    const reply = await callClaude(MODERATION_PROMPT + (options.strangers ? STRANGERS_ADDENDUM : ""), text, 120);
-    const parsed = JSON.parse(reply?.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as { decision?: string; note?: string };
+    const response = await timed("anthropic:screen-media", () =>
+      getClient().messages.create({
+        model: MODEL,
+        max_tokens: 160,
+        thinking: { type: "disabled" },
+        system: MODERATION_PROMPT + MEDIA_ADDENDUM + (options.strangers ? STRANGERS_ADDENDUM : ""),
+        messages: [{ role: "user", content }],
+      }),
+    );
+    const reply = response.content.find((block) => block.type === "text");
+    const parsed = JSON.parse((reply?.type === "text" ? reply.text : "").match(/\{[\s\S]*\}/)?.[0] ?? "{}") as {
+      decision?: string; note?: string; guideline?: string; severe?: boolean;
+    };
     const decision = (["approve", "review", "distress", "reject"] as const).find((value) => value === parsed.decision);
-    return { decision: decision ?? "review", note: (parsed.note ?? "").slice(0, 200) };
+    return { decision: decision ?? "review", note: (parsed.note ?? "").slice(0, 200), guideline: parsed.guideline, severe: parsed.severe === true };
+  } catch (error) {
+    console.error("Media screening failed", error);
+    return { decision: "review", note: "screening unavailable" };
+  }
+}
+
+export type ModerationResult = { decision: ModerationDecision; note: string; guideline?: string; severe?: boolean };
+
+export async function moderateCommunityPost(text: string, options: { strangers?: boolean } = {}): Promise<ModerationResult> {
+  try {
+    const reply = await callClaude(MODERATION_PROMPT + (options.strangers ? STRANGERS_ADDENDUM : ""), text, 160);
+    const parsed = JSON.parse(reply?.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as { decision?: string; note?: string; guideline?: string; severe?: boolean };
+    const decision = (["approve", "review", "distress", "reject"] as const).find((value) => value === parsed.decision);
+    return { decision: decision ?? "review", note: (parsed.note ?? "").slice(0, 200), guideline: parsed.guideline, severe: parsed.severe === true };
   } catch (error) {
     console.error("Community screening failed", error);
     return { decision: "review", note: "screening unavailable" };

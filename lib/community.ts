@@ -1,10 +1,12 @@
 import "server-only";
 import crypto from "node:crypto";
 import { after } from "next/server";
-import { moderateCommunityPost } from "@/lib/ai";
+import { type ModerationResult, moderateCommunityMedia, moderateCommunityPost } from "@/lib/ai";
 import { sendAppNotification } from "@/lib/apns";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import type { CommunityPostStatus, UserRow } from "@/lib/supabase/types";
+import { GUIDELINES, isGuideline, postingBlockedReason, recordStrike } from "@/lib/standing";
+import type { CommunityPostStatus, PostMedia, UserRow } from "@/lib/supabase/types";
+import { transcribe } from "@/lib/transcribe";
 
 // Together: reflections shared with everyone on the same day, and posts in a
 // walking-companion group. One table (community_posts) for both, so the
@@ -17,10 +19,21 @@ export const MAX_GROUP_SIZE = 12;
 export const MAX_MATCHED_GROUP_SIZE = 6;
 /** The least time between two "new in your group" notifications to one person. */
 const NOTIFY_GAP_MINUTES = 20;
-/** Harmful posts in matched groups, within a month, that end someone's matching. */
-const BLOCK_AFTER_REJECTIONS = 2;
 /** Reports that hide a post until an admin looks. */
 const HIDE_AFTER_REPORTS = 2;
+export const MEDIA_BUCKET = "community-media";
+const MEDIA_URL_SECONDS = 60 * 60;
+
+/** A photo, video or voice message as the app plays it. */
+export type SharedMedia = {
+  kind: PostMedia["kind"];
+  url: string;
+  thumbURL: string | null;
+  duration: number | null;
+  width: number | null;
+  height: number | null;
+  transcript: string | null;
+};
 
 export type SharedPost = {
   id: string;
@@ -31,6 +44,9 @@ export type SharedPost = {
   mine: boolean;
   /** Written by the companion itself — a welcome, or a nudge to a quiet group. */
   fromCompanion: boolean;
+  /** Who wrote it, without saying who they are (memberId); opens their member card. */
+  authorId: string | null;
+  media: SharedMedia | null;
 };
 
 export type ShareOutcome = {
@@ -43,10 +59,27 @@ export type ShareOutcome = {
   notice?: string;
 };
 
-type PostFields = { id: string; day_number: number | null; display_name: string | null; content: string; created_at: string; phone_number: string | null };
-const POST_FIELDS = "id, day_number, display_name, content, created_at, phone_number";
+type PostFields = {
+  id: string;
+  day_number: number | null;
+  display_name: string | null;
+  content: string;
+  created_at: string;
+  phone_number: string | null;
+  media: PostMedia | null;
+};
+const POST_FIELDS = "id, day_number, display_name, content, created_at, phone_number, media";
 
-function toShared(row: PostFields, viewer: string): SharedPost {
+/**
+ * A stable, opaque id for a participant in Community — what member cards
+ * are opened by. It reveals nothing about their phone or sign-in.
+ */
+export function memberId(phone: string): string {
+  const salt = process.env.PARTICIPANT_SESSION_SECRET ?? "mount";
+  return crypto.createHmac("sha256", salt).update(`member:${phone}`).digest("hex").slice(0, 20);
+}
+
+function toShared(row: PostFields, viewer: string, media: SharedMedia | null = null): SharedPost {
   return {
     id: row.id,
     dayNumber: row.day_number,
@@ -55,7 +88,38 @@ function toShared(row: PostFields, viewer: string): SharedPost {
     createdAt: row.created_at,
     mine: row.phone_number === viewer,
     fromCompanion: row.phone_number === null,
+    authorId: row.phone_number ? memberId(row.phone_number) : null,
+    media,
   };
+}
+
+/** Posts as the app shows them, their media behind short-lived links. */
+async function sharedPosts(rows: PostFields[], viewer: string): Promise<SharedPost[]> {
+  const paths = rows.flatMap((row) => (row.media ? [row.media.path, row.media.thumbPath].filter((path): path is string => Boolean(path)) : []));
+  const signed = new Map<string, string>();
+  if (paths.length) {
+    const { data } = await getSupabaseAdmin().storage.from(MEDIA_BUCKET).createSignedUrls(paths, MEDIA_URL_SECONDS);
+    for (const item of data ?? []) if (item.path && item.signedUrl) signed.set(item.path, item.signedUrl);
+  }
+  return rows.map((row) => {
+    const media = row.media;
+    const url = media ? signed.get(media.path) : undefined;
+    return toShared(
+      row,
+      viewer,
+      media && url
+        ? {
+            kind: media.kind,
+            url,
+            thumbURL: media.thumbPath ? signed.get(media.thumbPath) ?? null : null,
+            duration: media.duration ?? null,
+            width: media.width ?? null,
+            height: media.height ?? null,
+            transcript: media.transcript ?? null,
+          }
+        : null,
+    );
+  });
 }
 
 /** Phone numbers, emails, handles and links — never passed between strangers. */
@@ -68,12 +132,32 @@ export function displayNameFor(participant: UserRow, anonymous: boolean, groupNa
   return name ? name.slice(0, 40) : null;
 }
 
+/** Screens a post's photo, video or recording, transcribing what's said. */
+async function screenMedia(text: string, media: PostMedia, strangers: boolean): Promise<{ result: ModerationResult; media: PostMedia }> {
+  const storage = getSupabaseAdmin().storage.from(MEDIA_BUCKET);
+  const images: Buffer[] = [];
+  const pictures = media.kind === "image" ? [media.path] : media.framesPath ? [media.framesPath] : media.thumbPath ? [media.thumbPath] : [];
+  for (const path of pictures) {
+    const { data } = await storage.download(path);
+    if (data) images.push(Buffer.from(await data.arrayBuffer()));
+  }
+  let transcript: string | null = null;
+  if (media.kind !== "image") {
+    const { data } = await storage.createSignedUrl(media.path, 600);
+    transcript = data?.signedUrl ? await transcribe(data.signedUrl) : null;
+    // Couldn't hear it: a person listens before anyone else does.
+    if (transcript === null) return { result: { decision: "review", note: "couldn't transcribe" }, media };
+  }
+  const result = await moderateCommunityMedia({ text, images, transcript: transcript ?? undefined }, { strangers });
+  return { result, media: transcript ? { ...media, transcript: transcript.slice(0, 4000) } : media };
+}
+
 /**
  * Screens and saves a post. Clearly safe posts are approved; uncertain ones
  * wait in the admin queue; distress is held ('flagged') and the writer is
- * offered support; harmful posts are held as 'deleted'. In a group of
- * strangers, contact details are held too, and repeated harmful posts end
- * the writer's place in matched groups.
+ * offered support; harmful posts are held as 'deleted' and count as a strike
+ * (lib/standing.ts). Someone whose posting is paused, or who has been
+ * removed from Community, can't post at all.
  */
 export async function sharePost(params: {
   participant: UserRow;
@@ -82,14 +166,26 @@ export async function sharePost(params: {
   displayName: string | null;
   groupId?: string;
   strangers?: boolean;
+  media?: PostMedia;
 }): Promise<ShareOutcome> {
+  const blocked = postingBlockedReason(params.participant);
+  if (blocked) return { outcome: "held", support: false, notice: blocked };
+
   const supabase = getSupabaseAdmin();
+  const strangers = Boolean(params.strangers);
   // Looks like contact details: held for a person to look at (a pattern can
   // be wrong, so it never counts against the writer).
-  const looksLikeContact = Boolean(params.strangers) && CONTACT_DETAILS.test(params.text);
-  const { decision, note } = looksLikeContact
-    ? { decision: "review" as const, note: "contact details (pattern)" }
-    : await moderateCommunityPost(params.text, { strangers: params.strangers });
+  const looksLikeContact = strangers && CONTACT_DETAILS.test(params.text);
+  let media = params.media;
+  let result: ModerationResult;
+  if (looksLikeContact) {
+    result = { decision: "review", note: "contact details (pattern)" };
+  } else if (media) {
+    ({ result, media } = await screenMedia(params.text, media, strangers));
+  } else {
+    result = await moderateCommunityPost(params.text, { strangers });
+  }
+  const { decision, note } = result;
   const status: CommunityPostStatus =
     decision === "approve" ? "approved" : decision === "review" ? "pending" : decision === "distress" ? "flagged" : "deleted";
 
@@ -101,16 +197,17 @@ export async function sharePost(params: {
       content: params.text,
       display_name: params.displayName,
       group_id: params.groupId ?? null,
+      media: media ?? null,
       status,
       moderated_at: new Date().toISOString(),
       moderated_by: "claude",
-      moderation_note: `${decision}: ${note}`,
+      moderation_note: `${decision}${result.guideline ? ` (${result.guideline}${result.severe ? ", severe" : ""})` : ""}: ${note}`,
     })
     .select()
     .single();
   if (error || !data) throw new Error(error?.message ?? "Couldn't save the post");
 
-  const post = status === "approved" ? toShared(data, params.participant.phone_number) : undefined;
+  const post = status === "approved" ? (await sharedPosts([data], params.participant.phone_number))[0] : undefined;
   if (post && params.groupId) {
     const groupId = params.groupId;
     await supabase.from("walking_groups").update({ last_activity_at: data.created_at }).eq("id", groupId);
@@ -121,13 +218,21 @@ export async function sharePost(params: {
   let notice: string | undefined;
   if (looksLikeContact) {
     notice = "To keep everyone safe, contact details, handles and links aren't shared in matched groups. If this was something else, it will appear once it has been read.";
-  } else if (decision === "reject" && params.strangers) {
-    notice = note.includes("contact")
-      ? "To keep everyone safe, contact details, handles and links aren't shared in matched groups."
-      : "This wasn't shared. Matched groups are kept gentle and safe for everyone.";
-    if (await blockIfRepeated(params.participant.phone_number)) {
-      notice = "You've been removed from matched groups because of what was shared. Your journey and any groups with friends are unaffected.";
-    }
+  } else if (decision === "reject") {
+    const guideline = isGuideline(result.guideline) ? result.guideline : "other";
+    const action = await recordStrike({
+      phone: params.participant.phone_number,
+      guideline,
+      postId: data.id,
+      note,
+      source: "screen",
+      severe: result.severe,
+    });
+    const rule = GUIDELINES[guideline];
+    notice =
+      action === "warn"
+        ? `This wasn't shared: it breaks the Community Guidelines (${rule}). Please read them again before you post.`
+        : (postingBlockedReason({ ...params.participant, community_status: action === "pause" ? "paused" : "removed", community_paused_until: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString() }) ?? undefined);
   }
 
   return {
@@ -136,30 +241,6 @@ export async function sharePost(params: {
     post,
     notice,
   };
-}
-
-/** After repeated harmful posts in matched groups: out of them, and out of matching. */
-async function blockIfRepeated(phone: string): Promise<boolean> {
-  const supabase = getSupabaseAdmin();
-  const { data: matched } = await supabase.from("walking_groups").select("id").eq("kind", "matched");
-  const matchedIds = (matched ?? []).map((group) => group.id);
-  if (matchedIds.length === 0) return false;
-  const monthAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
-  const { count } = await supabase
-    .from("community_posts")
-    .select("*", { count: "exact", head: true })
-    .eq("phone_number", phone)
-    .eq("status", "deleted")
-    .eq("moderated_by", "claude")
-    .in("group_id", matchedIds)
-    .gte("created_at", monthAgo);
-  if ((count ?? 0) < BLOCK_AFTER_REJECTIONS) return false;
-  await supabase.from("users").update({ matching_blocked_at: new Date().toISOString() }).eq("phone_number", phone);
-  await supabase.from("walking_match_requests").delete().eq("phone_number", phone);
-  for (const groupId of matchedIds) {
-    if (await isMember(groupId, phone)) await leaveGroup(groupId, phone);
-  }
-  return true;
 }
 
 /**
@@ -187,7 +268,7 @@ export async function notifyGroup(groupId: string, authorPhone: string | null, p
       .eq("phone_number", member.phone_number);
     await sendAppNotification(member.phone_number, {
       title: group.name,
-      body: `${name}: ${post.text.length > 140 ? `${post.text.slice(0, 137)}…` : post.text}`,
+      body: `${name}: ${post.text ? (post.text.length > 140 ? `${post.text.slice(0, 137)}…` : post.text) : post.media?.kind === "audio" ? "a voice message" : post.media?.kind === "video" ? "a video" : "a photo"}`,
       link: `mount://group/${groupId}`,
       collapseId: `group-${groupId}`,
     });
@@ -233,7 +314,7 @@ export async function dayReflections(dayNumber: number, viewer: string, limit = 
     .eq("status", "approved")
     .order("created_at", { ascending: false })
     .limit(limit);
-  return (data ?? []).map((row) => toShared(row, viewer));
+  return sharedPosts(data ?? [], viewer);
 }
 
 /**
@@ -250,7 +331,7 @@ export async function groupPosts(groupId: string, viewer: string, since?: string
     .limit(200);
   if (since) query = query.gt("created_at", since);
   const { data } = await query;
-  return (data ?? []).reverse().map((row) => toShared(row, viewer));
+  return sharedPosts((data ?? []).reverse(), viewer);
 }
 
 /** Removes the participant's own post. */
@@ -286,7 +367,7 @@ export type WalkingGroup = {
   /** Friends' groups only — matched groups take no invitations. */
   inviteCode: string | null;
   inviteURL: string | null;
-  members: { name: string; isMe: boolean; currentDay: number | null }[];
+  members: { id: string; name: string; isMe: boolean; currentDay: number | null }[];
   unread: number;
   lastMessage: { name: string; text: string; createdAt: string } | null;
 };
@@ -394,13 +475,80 @@ export async function groupsFor(phone: string): Promise<WalkingGroup[]> {
         members: (members ?? [])
           .filter((member) => member.group_id === group.id)
           .map((member) => ({
+            id: memberId(member.phone_number),
             name: member.display_name || "A friend",
             isMe: member.phone_number === phone,
             currentDay: dayOf.get(member.phone_number) ?? null,
           })),
         unread: count ?? 0,
-        lastMessage: last ? { name: last.mine ? "You" : last.displayName ?? "Someone", text: last.text, createdAt: last.createdAt } : null,
+        lastMessage: last
+          ? {
+              name: last.mine ? "You" : last.displayName ?? "Someone",
+              text: last.text || (last.media?.kind === "audio" ? "Voice message" : last.media?.kind === "video" ? "Video" : last.media ? "Photo" : ""),
+              createdAt: last.createdAt,
+            }
+          : null,
       };
     }),
   );
+}
+
+// MARK: - Member cards
+
+export type MemberCard = {
+  id: string;
+  name: string;
+  avatar: { kind: "initials" } | { kind: "symbol"; symbol: string; tone: string } | { kind: "photo"; photoURL: string };
+  currentDay: number;
+  startedOn: string | null;
+  about: string | null;
+  /** Other groups the viewer and this person share. */
+  groupsInCommon: string[];
+};
+
+/**
+ * A soft profile of someone in one of the viewer's groups: name, icon, the
+ * day they're on, when they began, and their one line. Photos show only in
+ * groups of friends; among matched strangers, an icon stands in.
+ */
+export async function memberCard(viewer: string, groupId: string, id: string): Promise<MemberCard | null> {
+  const supabase = getSupabaseAdmin();
+  if (!(await isMember(groupId, viewer))) return null;
+  const [{ data: group }, { data: members }] = await Promise.all([
+    supabase.from("walking_groups").select("kind").eq("id", groupId).maybeSingle(),
+    supabase.from("walking_group_members").select("phone_number, display_name").eq("group_id", groupId),
+  ]);
+  const member = (members ?? []).find((row) => memberId(row.phone_number) === id);
+  if (!group || !member) return null;
+  const { data: user } = await supabase.from("users").select("current_day, start_date, about, first_name").eq("phone_number", member.phone_number).maybeSingle();
+  if (!user) return null;
+
+  const { readAvatar } = await import("@/lib/avatar");
+  const stored = await readAvatar(member.phone_number);
+  const avatar: MemberCard["avatar"] =
+    stored?.kind === "symbol"
+      ? { kind: "symbol", symbol: stored.symbol, tone: stored.tone }
+      : stored?.kind === "photo" && "photoURL" in stored && group.kind === "friends"
+        ? { kind: "photo", photoURL: stored.photoURL }
+        : { kind: "initials" };
+
+  // Groups of friends they share — never matched groups, which aren't the viewer's to reveal.
+  const [{ data: mine }, { data: theirs }] = await Promise.all([
+    supabase.from("walking_group_members").select("group_id").eq("phone_number", viewer),
+    supabase.from("walking_group_members").select("group_id").eq("phone_number", member.phone_number),
+  ]);
+  const shared = (mine ?? []).map((row) => row.group_id).filter((other) => other !== groupId && (theirs ?? []).some((row) => row.group_id === other));
+  const { data: sharedGroups } = shared.length
+    ? await supabase.from("walking_groups").select("name").in("id", shared).eq("kind", "friends")
+    : { data: [] };
+
+  return {
+    id,
+    name: member.display_name || "A friend",
+    avatar,
+    currentDay: user.current_day,
+    startedOn: user.start_date ?? null,
+    about: user.about?.trim() || null,
+    groupsInCommon: (sharedGroups ?? []).map((row) => row.name),
+  };
 }

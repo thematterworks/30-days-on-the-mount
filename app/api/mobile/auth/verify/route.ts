@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { MAX_CODE_ATTEMPTS, badRequest, canonicalPhone, codesMatch, isReviewLogin, participantPayload, readJson } from "@/lib/mobile";
+import { MAX_CODE_ATTEMPTS, badRequest, canonicalPhone, codesMatch, isReviewLogin, participantPayload, readJson, suspended } from "@/lib/mobile";
 import { createParticipantSessionToken } from "@/lib/participant-auth";
 import { ensureParticipant } from "@/lib/mobile-accounts";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
   if (!participant) {
     return NextResponse.json({ error: "Sign-in is unavailable right now. Please try again." }, { status: 500 });
   }
+  if (participant.community_status === "suspended") return suspended();
   return NextResponse.json({
     token: await createParticipantSessionToken(phone),
     participant: participantPayload(participant),

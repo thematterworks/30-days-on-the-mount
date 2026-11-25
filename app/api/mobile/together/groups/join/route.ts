@@ -2,11 +2,15 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { displayNameFor, groupsFor, joinGroup } from "@/lib/community";
 import { badRequest, getMobileParticipant, readJson, unauthorized } from "@/lib/mobile";
+import { postingBlockedReason, standingOf } from "@/lib/standing";
 
 /** Joins a friend's group by its invite code. */
 export async function POST(request: NextRequest) {
   const participant = await getMobileParticipant(request);
   if (!participant) return unauthorized();
+  if (standingOf(participant).status === "removed") {
+    return NextResponse.json({ error: postingBlockedReason(participant) }, { status: 403 });
+  }
   const body = await readJson(request);
   const code = typeof body.code === "string" ? body.code : "";
   if (!code.trim()) return badRequest("Enter the invitation code.");

@@ -1,24 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase/server";
-import type { CommunityPostStatus } from "@/lib/supabase/types";
+import { type AdminView, adminPosts } from "@/lib/admin-community";
 
-const VALID_STATUSES: CommunityPostStatus[] = ["pending", "approved", "flagged", "deleted"];
+const VIEWS: AdminView[] = ["held", "reported", "all", "group"];
 
+/** Community posts for review: held, reported, everything, or one group's thread. */
 export async function GET(request: NextRequest) {
-  const status = request.nextUrl.searchParams.get("status");
-
-  let query = getSupabaseAdmin().from("community_posts").select("*").order("created_at", { ascending: false });
-
-  if (status && VALID_STATUSES.includes(status as CommunityPostStatus)) {
-    query = query.eq("status", status as CommunityPostStatus);
-  }
-
-  const { data, error } = await query.limit(200);
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ posts: data ?? [] });
+  const params = request.nextUrl.searchParams;
+  const view = (VIEWS.find((item) => item === params.get("view")) ?? "held") as AdminView;
+  const posts = await adminPosts(view, { groupId: params.get("group") ?? undefined, search: params.get("q") ?? undefined });
+  return NextResponse.json({ posts });
 }

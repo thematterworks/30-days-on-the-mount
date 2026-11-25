@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: "Terms governing the 30 Days on the Mount SMS messaging program.",
 };
 
-const EFFECTIVE_DATE = "August 12, 2026";
+const EFFECTIVE_DATE = "November 25, 2026";
 
 export default function TermsPage() {
   return (
@@ -109,6 +109,7 @@ export default function TermsPage() {
           <li>Attempt to interfere with, disrupt, or gain unauthorized access to the Program or our systems.</li>
           <li>Impersonate another person or misrepresent your affiliation with any person or entity.</li>
           <li>Use the Program for any purpose other than your own personal participation in the practice.</li>
+          <li>Harass, threaten, exploit, or seek to meet or contact other members outside the Program against the Community Guidelines.</li>
         </ul>
         <p>
           We may suspend or terminate your access to the Program, without notice, if we reasonably believe you have
@@ -125,10 +126,37 @@ export default function TermsPage() {
           respective copyright holders where applicable.
         </p>
         <p>
-          If you submit a reflection for possible sharing in a community space, you grant us a non-exclusive,
-          royalty-free license to review, moderate, and — only with an additional decision to publish on our part —
-          display that submission in connection with the Program.
+          You keep ownership of what you share in Community — reflections, messages, photos, videos and voice messages
+          (&ldquo;your content&rdquo;). You grant us a non-exclusive, worldwide, royalty-free license to store, screen,
+          transcribe, moderate, and display your content to the people you share it with, only to operate the Program.
+          You confirm your content is yours to share and that sharing it doesn&apos;t infringe anyone else&apos;s rights.
         </p>
+
+        <h2>The App and Community</h2>
+        <p>
+          The 30 Days on the Mount app offers the same journey along with Community features: sharing reflections with
+          others walking the same day, walking groups with friends, and, for members 18 or older, small groups matched
+          with other members on nearby days. Your use of Community is governed by our{" "}
+          <a href="/community-guidelines">Community Guidelines</a>, which form part of these Terms.
+        </p>
+        <ul>
+          <li>
+            Everything shared in Community is screened before others see it, by an automated system (an AI model) and,
+            where needed, by people on our team. Voice messages and the sound of videos are transcribed for screening. We
+            may remove any content that breaks these Terms or the Community Guidelines.
+          </li>
+          <li>
+            Breaking the Community Guidelines leads to warnings, a pause on posting, removal from Community, or suspension
+            of your account, as described in the Community Guidelines. We may act immediately for serious violations, and
+            may report content to authorities where the law requires or someone&apos;s safety is at risk.
+          </li>
+          <li>
+            Other members are not our employees or agents, and we are not responsible for what they say or do, though we
+            work to keep Community safe. Community is not professional counseling or crisis care. If you are in crisis,
+            call or text 988, or call 911 in an emergency.
+          </li>
+          <li>You may report content or leave any group at any time, and appeal any decision by writing to us.</li>
+        </ul>
 
         <h2>Disclaimer of Warranties</h2>
         <p>

@@ -4,6 +4,7 @@ import { groupsFor } from "@/lib/community";
 import { cancelMatch, matchStatus, requestMatch } from "@/lib/matching";
 import { badRequest, getMobileParticipant, readJson, unauthorized } from "@/lib/mobile";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { postingBlockedReason, standingOf } from "@/lib/standing";
 
 /** Whether the participant is waiting to be matched with walking companions. */
 export async function GET(request: NextRequest) {
@@ -20,6 +21,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let participant = await getMobileParticipant(request);
   if (!participant) return unauthorized();
+  if (standingOf(participant).status === "removed") {
+    return NextResponse.json({ error: postingBlockedReason(participant) }, { status: 403 });
+  }
   if (participant.matching_blocked_at) {
     return NextResponse.json({ error: "Matching isn't available on this account." }, { status: 403 });
   }

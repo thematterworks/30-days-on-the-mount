@@ -80,7 +80,16 @@ export async function getMobileParticipant(request: Request): Promise<UserRow | 
     .select("*")
     .eq("phone_number", session.phone_number)
     .maybeSingle();
-  return user ?? null;
+  // A suspended account is signed out everywhere (lib/standing.ts).
+  if (!user || user.community_status === "suspended") return null;
+  return user;
+}
+
+export function suspended() {
+  return NextResponse.json(
+    { error: "This account has been suspended for breaking the Community Guidelines. To appeal, write to 30daysonthemount@gmail.com." },
+    { status: 403 },
+  );
 }
 
 export function unauthorized() {

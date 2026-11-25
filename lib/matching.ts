@@ -43,7 +43,7 @@ export type MatchStatus =
   | { state: "blocked" };
 
 export async function matchStatus(participant: UserRow): Promise<MatchStatus> {
-  if (participant.matching_blocked_at) return { state: "blocked" };
+  if (participant.matching_blocked_at || participant.community_status === "removed") return { state: "blocked" };
   const { data } = await getSupabaseAdmin()
     .from("walking_match_requests")
     .select("requested_at")
@@ -106,12 +106,15 @@ export async function formGroups(): Promise<number> {
   if (!requests?.length) return 0;
   const { data: users } = await supabase
     .from("users")
-    .select("phone_number, current_day, matching_blocked_at")
+    .select("phone_number, current_day, matching_blocked_at, community_status")
     .in("phone_number", requests.map((request) => request.phone_number));
   const userOf = new Map((users ?? []).map((user) => [user.phone_number, user]));
 
   let waiting: Waiting[] = requests
-    .filter((request) => !userOf.get(request.phone_number)?.matching_blocked_at)
+    .filter((request) => {
+      const user = userOf.get(request.phone_number);
+      return user && !user.matching_blocked_at && user.community_status !== "removed" && user.community_status !== "suspended";
+    })
     .map((request) => ({
       phone: request.phone_number,
       name: request.display_name,
