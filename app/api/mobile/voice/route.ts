@@ -6,7 +6,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { VoiceChatError, cleanVariables, conversationToken } from "@/lib/voice-chat";
 
 /**
- * Starts a spoken conversation with Qara: a conversation token, and the
+ * Starts a spoken conversation with the companion: a conversation token, and the
  * agent's dynamic variables — where the participant is (sent by the app)
  * and who they are (added here).
  */
@@ -22,12 +22,17 @@ export async function POST(request: NextRequest) {
   try {
     return NextResponse.json({ token: await conversationToken(), variables });
   } catch (error) {
-    const message = error instanceof VoiceChatError ? error.message : "Qara can't talk right now.";
+    const message = error instanceof VoiceChatError ? error.message : "Your companion can't talk right now.";
     return NextResponse.json({ error: message }, { status: 503 });
   }
 }
 
 const MAX_TURNS = 120;
+
+/** Without the agent's delivery cues ("[warmly]"), which are for the voice, not the page. */
+function spokenText(text: string): string {
+  return text.replace(/\[[^\]]*\]/g, "").replace(/[ \t]{2,}/g, " ").replace(/ ([,.!?;:])/g, "$1").trim();
+}
 const MAX_TURN_LENGTH = 4000;
 
 /**
@@ -43,7 +48,7 @@ export async function PUT(request: NextRequest) {
   const turns = transcript
     .filter(
       (turn): turn is { role: string; text: string } =>
-        (turn?.role === "user" || turn?.role === "agent") && typeof turn?.text === "string" && turn.text.trim() !== "",
+        (turn?.role === "user" || turn?.role === "agent") && typeof turn?.text === "string" && spokenText(turn.text) !== "",
     )
     .slice(0, MAX_TURNS);
   if (turns.length === 0) return NextResponse.json({ ok: true });
@@ -54,7 +59,7 @@ export async function PUT(request: NextRequest) {
     phone_number: participant.phone_number,
     direction: turn.role === "user" ? ("inbound" as const) : ("outbound" as const),
     message_type: turn.role === "user" ? ("freeform" as const) : ("ai_generated" as const),
-    message_body: turn.text.trim().slice(0, MAX_TURN_LENGTH),
+    message_body: spokenText(turn.text).slice(0, MAX_TURN_LENGTH),
     provider_message_id: `voice_${crypto.randomUUID()}`,
     status: "delivered" as const,
     channel: "app" as const,

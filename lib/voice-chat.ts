@@ -1,6 +1,7 @@
 import "server-only";
 
-// Spoken conversations with Qara, through an ElevenLabs agent. The app never
+// Spoken conversations with the companion, through an ElevenLabs agent
+// (the Qara agent, shown in the app simply as "Companion"). The app never
 // holds the API key: it asks this server for a short-lived conversation
 // token, and the call itself runs between the phone and ElevenLabs.
 //
@@ -21,7 +22,7 @@ export class VoiceChatError extends Error {}
 /** A token the app starts one conversation with. */
 export async function conversationToken(): Promise<string> {
   const key = apiKey();
-  if (!key) throw new VoiceChatError("Talking with Qara isn't set up yet.");
+  if (!key) throw new VoiceChatError("Talking with your companion isn't set up yet.");
   const agentId = process.env.ELEVENLABS_AGENT_ID?.trim() || QARA_AGENT_ID;
   const response = await fetch(
     `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${encodeURIComponent(agentId)}`,
@@ -29,10 +30,10 @@ export async function conversationToken(): Promise<string> {
   );
   if (!response.ok) {
     console.error("ElevenLabs conversation token failed", response.status, await response.text().catch(() => ""));
-    throw new VoiceChatError("Qara can't talk right now. Try again in a moment.");
+    throw new VoiceChatError("Your companion can't talk right now. Try again in a moment.");
   }
   const { token } = (await response.json()) as { token?: string };
-  if (!token) throw new VoiceChatError("Qara can't talk right now. Try again in a moment.");
+  if (!token) throw new VoiceChatError("Your companion can't talk right now. Try again in a moment.");
   return token;
 }
 
