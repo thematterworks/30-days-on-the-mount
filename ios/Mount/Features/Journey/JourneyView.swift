@@ -182,26 +182,14 @@ private struct DayPage: View {
             }
             .matchedTransitionSource(id: day.dayNumber, in: zoomNamespace)
 
-            Group {
-                if state == .active {
-                    Text(day.practiceTitle)
-                        .font(.zoeSerif(.title3).italic())
-                        .foregroundStyle(Zoe.ink.opacity(0.85))
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 28)
-                        .padding(.horizontal, 40)
-                } else if state == .completed && !finished {
-                    // Grace over streaks: a day that passed unentered isn't
-                    // missed or failed. It waits.
-                    Text("The mountain is still here.")
-                        .font(.zoeSerif(.title3).italic())
-                        .foregroundStyle(Zoe.ink.opacity(0.8))
-                        .padding(.top, 28)
-                } else if state == .completed {
-                    Text(day.scriptureReference)
-                        .zoeLabelStyle()
-                        .padding(.top, 28)
-                }
+            // Each day's own line: its practice, the day's logline.
+            if state != .locked {
+                Text(day.practiceTitle)
+                    .font(.zoeSerif(.title3).italic())
+                    .foregroundStyle(Zoe.ink.opacity(0.85))
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 28)
+                    .padding(.horizontal, 40)
             }
 
             Spacer(minLength: 40)
@@ -245,6 +233,10 @@ private struct DayPage: View {
                         .foregroundStyle(Zoe.inkMuted)
                 } else if finished {
                     Text("Carried into today").zoeLabelStyle(Zoe.peach)
+                } else if state == .completed {
+                    // Grace over streaks: a day that passed unentered isn't
+                    // missed or failed. It waits.
+                    Text("The mountain is still here").zoeLabelStyle()
                 }
             }
         }
