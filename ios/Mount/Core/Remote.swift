@@ -591,10 +591,13 @@ struct SharedPost: Decodable, Identifiable, Hashable, Sendable {
     let mine: Bool
     /// The companion's own words — a welcome, or a nudge to a quiet group.
     var fromCompanion: Bool = false
+    /// Who wrote it, opaquely: opens their member card.
+    var authorID: String?
+    var media: SharedMedia?
 
-    private enum CodingKeys: String, CodingKey { case id, dayNumber, displayName, text, createdAt, mine, fromCompanion }
+    private enum CodingKeys: String, CodingKey { case id, dayNumber, displayName, text, createdAt, mine, fromCompanion, authorID = "authorId", media }
 
-    init(id: String, dayNumber: Int?, displayName: String?, text: String, createdAt: Date, mine: Bool, fromCompanion: Bool = false) {
+    init(id: String, dayNumber: Int?, displayName: String?, text: String, createdAt: Date, mine: Bool, fromCompanion: Bool = false, authorID: String? = nil, media: SharedMedia? = nil) {
         self.id = id
         self.dayNumber = dayNumber
         self.displayName = displayName
@@ -602,6 +605,8 @@ struct SharedPost: Decodable, Identifiable, Hashable, Sendable {
         self.createdAt = createdAt
         self.mine = mine
         self.fromCompanion = fromCompanion
+        self.authorID = authorID
+        self.media = media
     }
 
     init(from decoder: any Decoder) throws {
@@ -613,7 +618,73 @@ struct SharedPost: Decodable, Identifiable, Hashable, Sendable {
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         mine = try container.decode(Bool.self, forKey: .mine)
         fromCompanion = try container.decodeIfPresent(Bool.self, forKey: .fromCompanion) ?? false
+        authorID = try container.decodeIfPresent(String.self, forKey: .authorID)
+        media = try? container.decodeIfPresent(SharedMedia.self, forKey: .media)
     }
+}
+
+/// A photo, video or voice message in a group, behind a short-lived link.
+struct SharedMedia: Decodable, Hashable, Sendable {
+    enum Kind: String, Decodable, Sendable { case image, video, audio }
+    let kind: Kind
+    let url: URL
+    let thumbURL: URL?
+    let duration: Double?
+    let width: Double?
+    let height: Double?
+    let transcript: String?
+}
+
+/// Where a photo, video or recording goes before the post that carries it.
+struct MediaUpload: Decodable, Sendable {
+    struct Target: Decodable, Sendable {
+        let path: String
+        let uploadURL: URL
+        let contentType: String
+    }
+    let upload: Target
+    let thumb: Target?
+    let frames: Target?
+}
+
+/// What a group post's media is, once uploaded.
+struct PostMediaReference: Encodable, Sendable {
+    let kind: String
+    let path: String
+    var thumbPath: String?
+    var framesPath: String?
+    var duration: Double?
+    var width: Double?
+    var height: Double?
+}
+
+/// Someone's soft profile, seen from a shared group.
+struct MemberCard: Decodable, Sendable, Identifiable {
+    struct Avatar: Decodable, Sendable {
+        let kind: String
+        let symbol: String?
+        let tone: String?
+        let photoURL: URL?
+    }
+    let id: String
+    let name: String
+    let avatar: Avatar
+    let currentDay: Int
+    let startedOn: String?
+    let about: String?
+    let groupsInCommon: [String]
+}
+
+/// The participant in Community: their standing, any notice for them, and their line.
+struct CommunityMe: Decodable, Sendable {
+    struct Standing: Decodable, Sendable {
+        let status: String
+        let pausedUntil: Date?
+        let notice: String?
+    }
+    let standing: Standing
+    let about: String?
+    let memberId: String
 }
 
 /// What happened to something shared: up now, waiting to be read, or held —
@@ -630,6 +701,7 @@ struct ShareOutcome: Decodable, Sendable {
 struct WalkingGroup: Decodable, Identifiable, Hashable, Sendable {
     enum Kind: String, Decodable, Sendable { case friends, matched }
     struct Member: Decodable, Hashable, Sendable {
+        var id: String?
         let name: String
         let isMe: Bool
         let currentDay: Int?
@@ -669,7 +741,12 @@ protocol TogetherService: Sendable {
     func leaveGroup(_ id: String) async throws
     /// The group's conversation — all of it, or only what came after `since`.
     func groupPosts(_ id: String, since: Date?) async throws -> [SharedPost]
-    func post(toGroup id: String, day: Int, text: String) async throws -> ShareOutcome
+    func post(toGroup id: String, day: Int, text: String, media: PostMediaReference?) async throws -> ShareOutcome
+    func mediaUpload(group id: String, kind: SharedMedia.Kind) async throws -> MediaUpload
+    func member(_ memberID: String, group id: String) async throws -> MemberCard
+    func communityMe() async throws -> CommunityMe
+    func setAbout(_ about: String) async throws -> String?
+    func clearNotice() async throws
     func matchStatus() async throws -> MatchStatus
     func requestMatch(adult: Bool, agreed: Bool, firstName: String?) async throws -> (MatchStatus, [WalkingGroup], groupID: String?)
     func cancelMatch() async throws -> MatchStatus
@@ -732,9 +809,33 @@ struct RemoteTogetherService: TogetherService {
         return response.posts
     }
 
-    func post(toGroup id: String, day: Int, text: String) async throws -> ShareOutcome {
-        struct Body: Encodable { let dayNumber: Int; let text: String }
-        return try await client.send("POST", "api/mobile/together/groups/\(id)/posts", body: Body(dayNumber: day, text: text))
+    func post(toGroup id: String, day: Int, text: String, media: PostMediaReference?) async throws -> ShareOutcome {
+        struct Body: Encodable { let dayNumber: Int; let text: String; let media: PostMediaReference? }
+        return try await client.send("POST", "api/mobile/together/groups/\(id)/posts", body: Body(dayNumber: day, text: text, media: media))
+    }
+
+    func mediaUpload(group id: String, kind: SharedMedia.Kind) async throws -> MediaUpload {
+        try await client.send("POST", "api/mobile/together/groups/\(id)/media", body: ["kind": kind.rawValue])
+    }
+
+    func member(_ memberID: String, group id: String) async throws -> MemberCard {
+        struct Response: Decodable { let member: MemberCard }
+        let response: Response = try await client.get("api/mobile/together/people/\(memberID)?group=\(id)")
+        return response.member
+    }
+
+    func communityMe() async throws -> CommunityMe {
+        try await client.get("api/mobile/together/me")
+    }
+
+    func setAbout(_ about: String) async throws -> String? {
+        struct Response: Decodable { let about: String? }
+        let response: Response = try await client.send("PUT", "api/mobile/together/me", body: ["about": about])
+        return response.about
+    }
+
+    func clearNotice() async throws {
+        let _: OK = try await client.send("DELETE", "api/mobile/together/me", body: Optional<[String: String]>.none)
     }
 
     private struct Status: Decodable { let status: MatchStatus }
@@ -784,9 +885,19 @@ struct PreviewTogetherService: TogetherService {
     func joinGroup(code: String, anonymous: Bool) async throws -> [WalkingGroup] { [] }
     func leaveGroup(_ id: String) async throws {}
     func groupPosts(_ id: String, since: Date?) async throws -> [SharedPost] { [] }
-    func post(toGroup id: String, day: Int, text: String) async throws -> ShareOutcome {
+    func post(toGroup id: String, day: Int, text: String, media: PostMediaReference?) async throws -> ShareOutcome {
         try await share(day: day, text: text, anonymous: false)
     }
+    func mediaUpload(group id: String, kind: SharedMedia.Kind) async throws -> MediaUpload { throw APIError.server("Media isn't available in previews.") }
+    func member(_ memberID: String, group id: String) async throws -> MemberCard {
+        MemberCard(id: memberID, name: "Grace", avatar: .init(kind: "symbol", symbol: "leaf", tone: "lavender", photoURL: nil),
+                   currentDay: 4, startedOn: "2026-11-20", about: "Learning to slow down.", groupsInCommon: [])
+    }
+    func communityMe() async throws -> CommunityMe {
+        CommunityMe(standing: .init(status: "active", pausedUntil: nil, notice: nil), about: nil, memberId: "me")
+    }
+    func setAbout(_ about: String) async throws -> String? { about.isEmpty ? nil : about }
+    func clearNotice() async throws {}
     func matchStatus() async throws -> MatchStatus { MatchStatus(state: .none, termsAccepted: false) }
     func requestMatch(adult: Bool, agreed: Bool, firstName: String?) async throws -> (MatchStatus, [WalkingGroup], groupID: String?) {
         (MatchStatus(state: .waiting, since: .now), [], nil)

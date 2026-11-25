@@ -13,13 +13,20 @@ final class CommunityState {
     var isMatching = false
     var joinCode: String?
     var openGroup: WalkingGroup?
+    var me: CommunityMe?
+    var isEditingAbout = false
 
     func refresh(_ model: AppModel) async {
         async let loadedGroups = model.together.groups()
         async let loadedMatch = model.together.matchStatus()
+        async let loadedMe = model.together.communityMe()
         if let loaded = try? await loadedGroups { groups = loaded }
         if let loaded = try? await loadedMatch { match = loaded }
+        if let loaded = try? await loadedMe { me = loaded }
     }
+
+    /// Whether they can start, join or be matched into groups.
+    var isRemoved: Bool { me?.standing.status == "removed" }
 }
 
 /// Profile → Community: walking groups, with friends or matched strangers.
@@ -27,15 +34,55 @@ struct CommunitySection: View {
     @Bindable var state: CommunityState
     @Environment(AppModel.self) private var model
 
+    static let guidelines = URL(string: "https://www.30daysonthemount.com/community-guidelines")!
+
     var body: some View {
         Section {
+            if let notice = state.me?.standing.notice {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(notice).font(.subheadline).foregroundStyle(Zoe.ink).fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 16) {
+                        Link("Read the guidelines", destination: Self.guidelines)
+                        Button("OK") {
+                            state.me = state.me.map { CommunityMe(standing: .init(status: $0.standing.status, pausedUntil: $0.standing.pausedUntil, notice: nil), about: $0.about, memberId: $0.memberId) }
+                            Task { try? await model.together.clearNotice() }
+                        }
+                    }
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Zoe.peach)
+                    .buttonStyle(.plain)
+                }
+                .padding(.vertical, 6)
+            }
             ForEach(state.groups) { group in
                 Button { state.openGroup = group } label: { GroupRow(group: group) }
                     .foregroundStyle(Zoe.ink)
             }
-            matchRow
-            row("Start a group with friends", symbol: "person.2") { state.isStarting = true }
-            row("Join with an invitation", symbol: "envelope.open") { state.joinCode = "" }
+            if !state.isRemoved {
+                matchRow
+                row("Start a group with friends", symbol: "person.2") { state.isStarting = true }
+                row("Join with an invitation", symbol: "envelope.open") { state.joinCode = "" }
+            }
+            Button { state.isEditingAbout = true } label: {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("A word about you").foregroundStyle(Zoe.ink)
+                        Text(state.me?.about ?? "One line others in your groups will see")
+                            .font(.caption)
+                            .foregroundStyle(Zoe.inkMuted)
+                            .lineLimit(1)
+                    }
+                } icon: {
+                    Image(systemName: "text.quote").foregroundStyle(Zoe.peach).frame(width: 30)
+                }
+            }
+            Link(destination: Self.guidelines) {
+                Label {
+                    Text("Community Guidelines").foregroundStyle(Zoe.ink)
+                } icon: {
+                    Image(systemName: "hand.raised").foregroundStyle(Zoe.peach).frame(width: 30)
+                }
+            }
         } header: {
             Text("Community")
         } footer: {
@@ -132,6 +179,11 @@ private struct CommunityPresentations: ViewModifier {
                             state.openGroup = updated.first { $0.id == groupID }
                         }
                     }
+                }
+            }
+            .sheet(isPresented: $state.isEditingAbout) {
+                AboutLineSheet(current: state.me?.about) { about in
+                    state.me = state.me.map { CommunityMe(standing: $0.standing, about: about, memberId: $0.memberId) }
                 }
             }
             .sheet(item: Binding(get: { state.joinCode.map(JoinRequest.init) }, set: { state.joinCode = $0?.code })) { request in

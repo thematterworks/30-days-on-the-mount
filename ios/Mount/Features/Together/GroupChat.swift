@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 /// A walking group's conversation: one thread across the days, marked by the
@@ -17,6 +18,9 @@ struct GroupChatView: View {
     @State private var note: String?
     @State private var showsSupport = false
     @State private var isShowingInfo = false
+    @State private var picked: PhotosPickerItem?
+    @State private var recorder: VoiceRecorder?
+    @State private var openMember: MemberRequest?
     @FocusState private var isComposing: Bool
 
     /// Quick words of encouragement, put in the draft to send or change.
@@ -38,12 +42,26 @@ struct GroupChatView: View {
             }
         }
         .sheet(isPresented: $isShowingInfo) {
-            GroupInfoSheet(group: group) {
+            GroupInfoSheet(group: group, onOpenMember: { id in
+                isShowingInfo = false
+                openMember = MemberRequest(id: id)
+            }) {
                 onLeft()
                 dismiss()
             }
         }
-        .task { await poll() }
+        .sheet(item: $openMember) { request in
+            MemberCardSheet(groupID: group.id, memberID: request.id)
+        }
+        .onChange(of: picked) { _, item in
+            guard let item else { return }
+            picked = nil
+            Task { await sendPicked(item) }
+        }
+        .task {
+            if recorder == nil { recorder = VoiceRecorder(audio: model.audio) }
+            await poll()
+        }
     }
 
     // MARK: Thread
@@ -67,13 +85,15 @@ struct GroupChatView: View {
                             DayMarker(day: day)
                         }
                         let continues = previous.map { $0.displayName == post.displayName && $0.mine == post.mine && !$0.fromCompanion && $0.dayNumber == post.dayNumber } ?? false
-                        MessageBubble(post: post, showsName: !continues, onDelete: { delete(post) }, onReport: { report(post) })
+                        MessageBubble(post: post, showsName: !continues, onDelete: { delete(post) }, onReport: { report(post) }) {
+                            if let id = post.authorID { openMember = MemberRequest(id: id) }
+                        }
                     }
                     if let sending {
                         MessageBubble(post: SharedPost(id: "sending", dayNumber: nil, displayName: nil, text: sending, createdAt: .now, mine: true), showsName: false)
                             .opacity(0.55)
                             .overlay(alignment: .bottomTrailing) {
-                                Text("Reading with care…").font(.caption2).foregroundStyle(Zoe.inkMuted).offset(y: 16)
+                                Text(sending.hasPrefix("Sending your") ? "Uploading…" : "Reading with care…").font(.caption2).foregroundStyle(Zoe.inkMuted).offset(y: 16)
                             }
                             .padding(.bottom, 14)
                     }
@@ -130,19 +150,61 @@ struct GroupChatView: View {
                 }
             }
             HStack(alignment: .bottom, spacing: 10) {
-                TextField(group.kind == .matched ? "Encourage, share, ask" : "Share with the group", text: $draft, axis: .vertical)
-                    .focused($isComposing)
-                    .lineLimit(1...5)
+                if let recorder, recorder.isRecording {
+                    HStack(spacing: 10) {
+                        Circle().fill(Color.red).frame(width: 9, height: 9)
+                        Text(Duration.seconds(recorder.elapsed).formatted(.time(pattern: .minuteSecond)))
+                            .font(.body.monospacedDigit())
+                        Text("Recording").font(.footnote).foregroundStyle(Zoe.inkMuted)
+                        Spacer()
+                        Button("Cancel") { recorder.cancel() }
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Zoe.inkMuted)
+                    }
                     .padding(.vertical, 10)
                     .padding(.horizontal, 14)
                     .background(Zoe.ink.opacity(0.08), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                Button(action: send) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 32))
-                        .foregroundStyle(trimmed.isEmpty || sending != nil ? Zoe.locked : Zoe.peach)
+                    Button {
+                        if let media = recorder.finish() { send(media: media) }
+                    } label: {
+                        Image(systemName: "arrow.up.circle.fill").font(.system(size: 32)).foregroundStyle(Zoe.peach)
+                    }
+                    .accessibilityLabel("Send voice message")
+                } else {
+                    PhotosPicker(selection: $picked, matching: .any(of: [.images, .videos])) {
+                        Image(systemName: "photo.on.rectangle")
+                            .font(.system(size: 20))
+                            .foregroundStyle(Zoe.inkMuted)
+                            .frame(width: 32, height: 40)
+                    }
+                    .disabled(sending != nil)
+                    .accessibilityLabel("Add a photo or video")
+                    TextField(group.kind == .matched ? "Encourage, share, ask" : "Share with the group", text: $draft, axis: .vertical)
+                        .focused($isComposing)
+                        .lineLimit(1...5)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 14)
+                        .background(Zoe.ink.opacity(0.08), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    if trimmed.isEmpty {
+                        Button {
+                            Task {
+                                if await recorder?.start() == false { note = "The microphone isn't available. Check Settings → 30 Days on the Mount." }
+                            }
+                        } label: {
+                            Image(systemName: "mic.circle.fill").font(.system(size: 32)).foregroundStyle(sending == nil ? Zoe.peach : Zoe.locked)
+                        }
+                        .disabled(sending != nil)
+                        .accessibilityLabel("Record a voice message")
+                    } else {
+                        Button(action: send) {
+                            Image(systemName: "arrow.up.circle.fill")
+                                .font(.system(size: 32))
+                                .foregroundStyle(sending != nil ? Zoe.locked : Zoe.peach)
+                        }
+                        .disabled(sending != nil)
+                        .accessibilityLabel("Send")
+                    }
                 }
-                .disabled(trimmed.isEmpty || sending != nil)
-                .accessibilityLabel("Send")
             }
             .padding(.horizontal, 16)
         }
@@ -179,7 +241,7 @@ struct GroupChatView: View {
         Task {
             defer { sending = nil }
             do {
-                let outcome = try await model.together.post(toGroup: group.id, day: max(model.journey.progress.currentDay, 1), text: text)
+                let outcome = try await model.together.post(toGroup: group.id, day: max(model.journey.progress.currentDay, 1), text: text, media: nil)
                 showsSupport = outcome.support
                 if let post = outcome.post {
                     if !posts.contains(where: { $0.id == post.id }) { posts.append(post) }
@@ -192,6 +254,55 @@ struct GroupChatView: View {
             } catch {
                 draft = text
                 note = "It couldn't be sent just now."
+            }
+        }
+    }
+
+    private func sendPicked(_ item: PhotosPickerItem) async {
+        note = nil
+        do {
+            if item.supportedContentTypes.contains(where: { $0.conforms(to: .movie) }) {
+                sending = "Sending your video"
+                guard let movie = try await item.loadTransferable(type: PickedMovie.self) else { throw MediaPreparation.Problem.unreadable }
+                let media = try await MediaPreparation.video(movie.url)
+                try? FileManager.default.removeItem(at: movie.url)
+                send(media: media)
+            } else {
+                sending = "Sending your photo"
+                guard let data = try await item.loadTransferable(type: Data.self) else { throw MediaPreparation.Problem.unreadable }
+                send(media: try MediaPreparation.image(data))
+            }
+        } catch {
+            sending = nil
+            note = error.localizedDescription
+        }
+    }
+
+    /// Uploads a photo, video or voice message, then posts it with any
+    /// words in the draft as its caption.
+    private func send(media: PreparedMedia) {
+        let caption = trimmed
+        draft = ""
+        sending = "Sending your \(media.label)"
+        note = nil
+        showsSupport = false
+        Task {
+            defer { sending = nil }
+            do {
+                let reference = try await MediaUploader.upload(media, group: group.id, service: model.together)
+                let outcome = try await model.together.post(toGroup: group.id, day: max(model.journey.progress.currentDay, 1), text: caption, media: reference)
+                showsSupport = outcome.support
+                if let post = outcome.post {
+                    if !posts.contains(where: { $0.id == post.id }) { posts.append(post) }
+                    UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                } else if let notice = outcome.notice {
+                    note = notice
+                } else if !outcome.support {
+                    note = "Thank you. It will appear once it has been seen."
+                }
+            } catch {
+                draft = caption
+                note = "Your \(media.label) couldn't be sent just now."
             }
         }
     }
@@ -228,6 +339,7 @@ private struct MessageBubble: View {
     let showsName: Bool
     var onDelete: (() -> Void)?
     var onReport: (() -> Void)?
+    var onOpenAuthor: (() -> Void)?
 
     var body: some View {
         if post.fromCompanion {
@@ -245,18 +357,29 @@ private struct MessageBubble: View {
         } else {
             VStack(alignment: post.mine ? .trailing : .leading, spacing: 3) {
                 if showsName && !post.mine {
-                    Text(post.displayName ?? "A friend")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Zoe.ink.opacity(0.75))
-                        .padding(.leading, 12)
-                        .padding(.top, 8)
+                    Button { onOpenAuthor?() } label: {
+                        Text(post.displayName ?? "A friend")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Zoe.ink.opacity(0.75))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.leading, 12)
+                    .padding(.top, 8)
+                    .accessibilityHint("Shows their card")
                 }
-                Text(post.text)
-                    .font(.zoeSerif(.body))
+                VStack(alignment: .leading, spacing: 8) {
+                    if let media = post.media {
+                        MediaContent(media: media, mine: post.mine)
+                    }
+                    if !post.text.isEmpty {
+                        Text(post.text)
+                            .font(.zoeSerif(.body))
+                            .lineSpacing(3)
+                    }
+                }
                     .foregroundStyle(post.mine ? Zoe.deep : Zoe.ink.opacity(0.94))
-                    .lineSpacing(3)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
+                    .padding(.horizontal, post.media?.kind == .image || post.media?.kind == .video ? 6 : 14)
+                    .padding(.vertical, post.media?.kind == .image || post.media?.kind == .video ? 6 : 9)
                     .background(post.mine ? Zoe.peach : Zoe.ink.opacity(0.09), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .fixedSize(horizontal: false, vertical: true)
                     .contextMenu {
@@ -278,6 +401,7 @@ private struct MessageBubble: View {
 /// friends' groups; the guidelines for matched ones; leaving.
 private struct GroupInfoSheet: View {
     let group: WalkingGroup
+    let onOpenMember: (String) -> Void
     let onLeft: () -> Void
 
     @Environment(AppModel.self) private var model
@@ -289,13 +413,21 @@ private struct GroupInfoSheet: View {
             List {
                 Section("Walking together") {
                     ForEach(Array(group.members.enumerated()), id: \.offset) { _, member in
-                        HStack {
-                            Text(member.isMe ? "You" : member.name)
-                            Spacer()
-                            if let day = member.currentDay {
-                                Text(day > 31 ? "Finished" : "Day \(day)").foregroundStyle(Zoe.inkMuted)
+                        Button {
+                            if let id = member.id, !member.isMe { onOpenMember(id) }
+                        } label: {
+                            HStack {
+                                Text(member.isMe ? "You" : member.name).foregroundStyle(Zoe.ink)
+                                Spacer()
+                                if let day = member.currentDay {
+                                    Text(day > 31 ? "Finished" : "Day \(day)").foregroundStyle(Zoe.inkMuted)
+                                }
+                                if !member.isMe {
+                                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Zoe.locked)
+                                }
                             }
                         }
+                        .disabled(member.isMe)
                     }
                 }
                 if let url = group.inviteURL, let code = group.inviteCode {
@@ -320,6 +452,9 @@ private struct GroupInfoSheet: View {
                     } footer: {
                         Text("Matched groups have no private messages and no invitations. Press and hold a message to report it.")
                     }
+                }
+                Section {
+                    Link("Community Guidelines", destination: URL(string: "https://www.30daysonthemount.com/community-guidelines")!)
                 }
                 Section {
                     Button("Leave this group", role: .destructive) { isConfirmingLeave = true }
