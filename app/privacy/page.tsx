@@ -1,187 +1,191 @@
 import type { Metadata } from "next";
+import { LegalPage } from "@/components/site/SiteChrome";
+import { SitePage } from "@/components/site/SitePage";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — 30 Days on the Mount",
-  description: "How 30 Days on the Mount collects, uses, and protects your information.",
+  description: "What 30 Days on the Mount collects, why, who helps us run it, and the choices you have.",
 };
 
-const EFFECTIVE_DATE = "August 12, 2026";
+const EFFECTIVE_DATE = "November 25, 2026";
+const EMAIL = "30daysonthemount@gmail.com";
 
+// "Text messages" holds registered wording for the SMS program (A2P 10DLC):
+// keep its first paragraph verbatim, and keep the operating company named
+// once in "Who we are".
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-background px-4 py-16 text-foreground">
-      <article className="prose prose-invert prose-headings:font-semibold prose-a:text-primary mx-auto max-w-3xl">
-        <h1>Privacy Policy</h1>
-        <p className="text-muted-foreground">Effective date: {EFFECTIVE_DATE}</p>
+    <SitePage>
+      <LegalPage title="Privacy Policy" effective={EFFECTIVE_DATE}>
+        <div className="site-summary">
+          <p style={{ marginTop: 0 }}>
+            <strong>In short:</strong> we collect what&apos;s needed to walk the thirty days with you, and nothing more. We
+            never sell your information or use it for advertising. Your private reflections stay private. What you share in
+            Community is seen only by the people you share it with, after it&apos;s been screened for safety. You can delete
+            everything, at any time, from the app.
+          </p>
+        </div>
 
+        <h2>Who we are</h2>
         <p>
-          <strong>The Matterworks LLC</strong> (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;), doing
-          business as 30 Days on the Mount, offers a 30-day guided reflection practice delivered by SMS text
-          message, and optionally by email, that participants join voluntarily. This policy explains what
-          information we collect when you use the service, why we collect it, who we share it with, and the choices
-          available to you. It applies to everyone who messages our SMS number or otherwise participates in the
-          practice.
+          This policy explains how 30 Days on the Mount (&ldquo;we,&rdquo; &ldquo;us&rdquo;) handles information in the mobile
+          app, on 30daysonthemount.com, and in the optional text-message program (the &ldquo;Service&rdquo;). 30 Days on the
+          Mount is operated by The Matterworks LLC, which is responsible for your information.
         </p>
 
-        <h2>SMS/Mobile Data</h2>
-        <p>
-          No mobile information will be shared with third parties or affiliates for marketing or promotional
-          purposes. All other use case categories exclude text messaging originator opt-in data and consent; this
-          information will not be shared with any third parties.
-        </p>
-        <p>
-          You opt in to text messages voluntarily by texting a keyword (START or MOUNTAIN) to our number. Consent to
-          receive text messages is not a condition of purchasing any goods or services, and you may opt out at any
-          time by replying STOP.
-        </p>
-
-        <h2>Information We Collect</h2>
-        <p>We collect only what is needed to run the practice and communicate with you:</p>
+        <h2>What we collect</h2>
+        <h3>To create your account</h3>
         <ul>
           <li>
-            <strong>Phone number.</strong> Provided when you text us to join. This is how we identify your account
-            and deliver daily messages.
+            <strong>How you sign in:</strong> if you use Sign in with Apple, we receive a private identifier from Apple (and,
+            the first time, your first name if you choose to share it); with email, your email address; with your phone
+            number, that number.
           </li>
+          <li><strong>Your first name,</strong> if you give it, so the journey can greet you and others in your groups know who you are.</li>
+          <li><strong>Your profile icon or photo,</strong> if you choose one.</li>
+        </ul>
+        <h3>To walk the journey with you</h3>
+        <ul>
+          <li><strong>Progress:</strong> which day you&apos;re on, what you&apos;ve finished, and your status.</li>
+          <li><strong>Preferences:</strong> your timezone, the hour of your morning invitation, and which notifications you want.</li>
           <li>
-            <strong>First name (optional).</strong> Collected during onboarding so we can address you personally.
+            <strong>Your reflections and conversations:</strong> what you write or say in reflections, and your conversations
+            with the companion (typed, or spoken — voice conversations are turned into text, and the text is kept with your
+            account).
           </li>
+          <li><strong>Highlights</strong> you make in the Bible, kept on your phone.</li>
+          <li><strong>Device information</strong> needed to send notifications to your phone (a push token), and basic technical logs that keep the Service running.</li>
+        </ul>
+        <h3>When you take part in Community</h3>
+        <ul>
           <li>
-            <strong>Email address (optional).</strong> Collected only if you tell us you&apos;d like to also
-            receive daily content by email.
+            <strong>What you share:</strong> reflections, group messages, photos, videos and voice messages, the name you share
+            them under, and your optional &ldquo;word about you.&rdquo; Voice messages and the sound of videos are transcribed.
           </li>
-          <li>
-            <strong>Timezone and preferred delivery hour.</strong> Collected during onboarding so your daily
-            message arrives at a time you choose, rather than a fixed time for everyone.
-          </li>
-          <li>
-            <strong>Conversation history.</strong> The messages you send us and the replies you receive, including
-            AI-assisted responses to your reflections, so the practice can respond to what you actually write and
-            so we can review conversations for quality and support purposes.
-          </li>
-          <li>
-            <strong>Community reflections (optional).</strong> If you submit a reflection for possible sharing in a
-            community space, that content — along with the phone number that submitted it — is reviewed by our
-            team before any decision to publish it.
-          </li>
-          <li>
-            <strong>Progress data.</strong> Which day of the 30-day practice you&apos;re on and your participation
-            status (for example, active, paused, or completed).
-          </li>
+          <li><strong>Your groups</strong> and invitations, your age confirmation and agreement to the guidelines if you ask to be matched, and any reports you make.</li>
+          <li><strong>Safety records:</strong> the results of screening, reports about your posts, and any warnings or other actions under the Community Guidelines.</li>
+        </ul>
+        <h3>If you invite someone</h3>
+        <p>
+          Your invitation link carries your first name and the day you&apos;re on, and we count how often it&apos;s opened.
+          We don&apos;t collect information about the people you invite unless they choose to join.
+        </p>
+        <p>
+          We don&apos;t collect payment information or your precise location, and we don&apos;t knowingly collect
+          information from children under 13.
+        </p>
+
+        <h2>How we use it</h2>
+        <ul>
+          <li>To deliver each day&apos;s journey, at the times you choose, in the app and, if you opted in, by text message or email.</li>
+          <li>To let the companion respond to what you write or say, and to prepare verse studies.</li>
+          <li>To show what you share in Community to the people you shared it with, and to keep Community safe.</li>
+          <li>To form walking groups, and to send notifications you&apos;ve allowed.</li>
+          <li>To keep the Service secure, fix problems, and improve it.</li>
+          <li>To answer you when you contact us, and to meet our legal obligations.</li>
         </ul>
         <p>
-          We do not collect payment information, precise location data, or any information from anyone we know to
-          be under the age of 13.
+          <strong>We do not sell or rent your information, and we don&apos;t use it for advertising.</strong> We don&apos;t use
+          your reflections or conversations to train AI models, and our AI providers don&apos;t use them to train theirs.
         </p>
 
-        <h2>How We Use Your Information</h2>
+        <h2>Who sees what</h2>
         <ul>
-          <li>To deliver the daily practice content you signed up for, at the time you asked to receive it.</li>
-          <li>To respond to the reflections and questions you send us, including generating a reply with AI.</li>
-          <li>To operate, maintain, and improve the practice and the underlying service.</li>
-          <li>To send the same day&apos;s content by email, if you opted into that.</li>
-          <li>To moderate and, with your submission, potentially publish community reflections.</li>
-          <li>To respond if you contact us directly with a question or request.</li>
-        </ul>
-        <p>We do not sell your information, and we do not use it for advertising.</p>
-
-        <h2>AI-Assisted Responses</h2>
-        <p>
-          When you reply to a daily message, the text of your reply is sent to Anthropic (the maker of the Claude
-          AI models) so we can generate a thoughtful, contextual response. Anthropic processes that message on our
-          behalf to produce the reply; it is not used to train Anthropic&apos;s models under our agreement with
-          them.
-        </p>
-
-        <h2>Third-Party Service Providers</h2>
-        <p>
-          We rely on the following infrastructure providers to operate the service. Each processes the specific
-          data described below on our behalf, under their own privacy and security commitments:
-        </p>
-        <ul>
+          <li><strong>Private reflections and companion conversations</strong> are yours. Other members never see them.</li>
           <li>
-            <strong>Vercel</strong> — hosts our website and application infrastructure.
+            <strong>What you share in Community</strong> is seen by the people you share it with: everyone walking that day for
+            a shared reflection, or the members of a group. Other members see your first name (or &ldquo;Anonymous,&rdquo;
+            where you can choose it), your icon, the day you&apos;re on, and your &ldquo;word about you.&rdquo; In groups of
+            people matched together, your photo isn&apos;t shown — only an icon.
           </li>
           <li>
-            <strong>Supabase</strong> — stores our database, including participant records and conversation
-            history, on Supabase&apos;s managed PostgreSQL infrastructure.
+            <strong>Our team</strong> can see content in Community when it&apos;s held by the screen, reported, or reviewed to
+            keep Community safe, and can see account information when needed to help you or run the Service.
           </li>
           <li>
-            <strong>Twilio</strong> — delivers and receives the SMS text messages that make up the practice, on our
-            behalf. Mobile opt-in data and consent are never shared for marketing or promotional purposes.
-          </li>
-          <li>
-            <strong>Resend</strong> — delivers the optional daily email, for participants who opt in.
-          </li>
-          <li>
-            <strong>Anthropic</strong> — processes the text of your replies to generate AI-assisted responses, as
-            described above.
+            <strong>Authorities:</strong> we may share information when the law requires it, or when we believe in good faith
+            that it&apos;s necessary to protect someone&apos;s safety, including reporting child sexual exploitation material
+            as the law requires.
           </li>
         </ul>
 
-        <h2>Data Retention</h2>
+        <h2>Services that help us run it</h2>
+        <p>These providers process information on our behalf, only to provide their service to us:</p>
+        <ul>
+          <li><strong>Supabase</strong> — our database and file storage, where accounts, progress, conversations and Community content are kept.</li>
+          <li><strong>Vercel</strong> — hosts the website and the servers the app talks to.</li>
+          <li><strong>Anthropic</strong> — its Claude models write the companion&apos;s replies and verse studies, and screen what&apos;s shared in Community.</li>
+          <li><strong>ElevenLabs</strong> — the companion&apos;s voice, reading aloud, voice conversations, and transcribing voice messages and videos for screening.</li>
+          <li><strong>Apple</strong> — Sign in with Apple, and delivering notifications to your phone.</li>
+          <li><strong>Twilio</strong> — sends and receives text messages, for the text-message program and phone sign-in codes.</li>
+          <li><strong>Resend</strong> — sends email sign-in codes, and the daily email if you asked for it.</li>
+        </ul>
+
+        <h2>Text messages</h2>
         <p>
-          We retain participant and conversation data for as long as your account is active or as needed to
-          operate the practice, and for a reasonable period afterward in case you return or to comply with our
-          legal obligations. You can ask us to delete your data at any time — see &ldquo;Your Rights and
-          Choices&rdquo; below.
+          No mobile information will be shared with third parties or affiliates for marketing or promotional purposes. All
+          other use case categories exclude text messaging originator opt-in data and consent; this information will not be
+          shared with any third parties.
+        </p>
+        <p>
+          You opt in to text messages voluntarily by texting a keyword (START or MOUNTAIN) to our number. Consent to receive
+          text messages is not a condition of purchasing any goods or services, and you may opt out at any time by replying
+          STOP.
         </p>
 
-        <h2>Your Rights and Choices</h2>
+        <h2>How long we keep it</h2>
+        <p>
+          We keep your information while your account is active. When you delete your account, we delete your account,
+          progress, reflections, conversations, photo and Community posts. A small amount may remain for a limited time in
+          backups, or where we must keep it for legal or safety reasons — for example, records of serious violations of the
+          Community Guidelines.
+        </p>
+
+        <h2>Your choices</h2>
         <ul>
+          <li><strong>Delete your account</strong> at any time in the app: Profile → Delete account. It can&apos;t be undone.</li>
+          <li><strong>Change or turn off</strong> notifications in Profile or in your phone&apos;s Settings.</li>
+          <li><strong>Delete what you&apos;ve shared</strong> in Community: press and hold your message and choose Delete.</li>
+          <li><strong>Stop text messages</strong> by replying STOP.</li>
           <li>
-            <strong>Access or correction.</strong> You can ask us what information we have about you, and ask us to
-            correct it.
-          </li>
-          <li>
-            <strong>Deletion.</strong> You can ask us to delete your information at any time.
-          </li>
-          <li>
-            <strong>Opting out.</strong> Reply <strong>STOP</strong>, <strong>UNSUBSCRIBE</strong>, or{" "}
-            <strong>CANCEL</strong> to any message at any time and we will immediately stop sending you daily
-            messages and confirm it back to you. You can also reach us using the email below to pause or remove
-            your account.
+            <strong>Ask us</strong> for a copy of your information, to correct it, or to delete it, by writing to{" "}
+            <a href={`mailto:${EMAIL}`}>{EMAIL}</a>. Depending on where you live (for example California, or the EU and UK),
+            you may have further rights, and you can exercise them the same way. We won&apos;t treat you differently for using
+            them.
           </li>
         </ul>
+
+        <h2>Security</h2>
         <p>
-          To exercise any of these choices, contact us using the email address at the bottom of this page. We will
-          respond within a reasonable time.
+          We use encrypted connections, private storage with short-lived links for photos and recordings, and access limited
+          to those who need it. No system is perfectly secure, so we can&apos;t promise absolute security, but we work to
+          protect your information and will tell you if a breach affects you, as the law requires.
         </p>
 
-        <h2>Data Security</h2>
+        <h2>Children</h2>
         <p>
-          We use industry-standard measures to protect your information, including encrypted connections,
-          access-controlled infrastructure, and restricting who on our team can view participant data. No method of
-          transmission or storage is completely secure, and we cannot guarantee absolute security.
+          The Service isn&apos;t meant for children under 13, and we don&apos;t knowingly collect their information. Matching
+          with other members is only for people 18 and older. If you believe a child under 13 has given us information,
+          please contact us and we&apos;ll delete it.
         </p>
 
-        <h2>Children&apos;s Privacy</h2>
+        <h2>Where it&apos;s stored</h2>
         <p>
-          This service is not directed to, and is not intended for use by, anyone under the age of 13. We do not
-          knowingly collect information from children under 13. If you believe a child has provided us with
-          information, please contact us and we will delete it.
+          Our service providers store and process information in the United States and other countries where they operate.
+          By using the Service, you understand your information may be processed there.
         </p>
 
-        <h2>Changes to This Policy</h2>
+        <h2>Changes</h2>
         <p>
-          We may update this policy from time to time. If we make material changes, we will update the effective
-          date above. Continued use of the service after a change means you accept the updated policy.
+          We may update this policy as the Service grows. We&apos;ll change the effective date above and, for significant
+          changes, let you know in the app.
         </p>
 
-        <h2>Contact Us</h2>
+        <h2>Contact</h2>
         <p>
-          For questions about this policy, or to request access to, correction of, or deletion of your data, contact
-          us at:
+          Questions, or a request about your information: <a href={`mailto:${EMAIL}`}>{EMAIL}</a>.
         </p>
-        <p>
-          The Matterworks LLC
-          <br />
-          <a href="mailto:30daysonthemount@gmail.com">30daysonthemount@gmail.com</a>
-        </p>
-        <p className="text-sm text-muted-foreground">
-          See also our <a href="/terms">Terms and Conditions</a>, which govern your participation in the messaging
-          program.
-        </p>
-      </article>
-    </div>
+      </LegalPage>
+    </SitePage>
   );
 }

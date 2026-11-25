@@ -1,207 +1,225 @@
 import type { Metadata } from "next";
+import { LegalPage } from "@/components/site/SiteChrome";
+import { SitePage } from "@/components/site/SitePage";
 
 export const metadata: Metadata = {
-  title: "Terms and Conditions — 30 Days on the Mount",
-  description: "Terms governing the 30 Days on the Mount SMS messaging program.",
+  title: "Terms of Use — 30 Days on the Mount",
+  description: "The terms for using 30 Days on the Mount: the app, the website, and the text-message program.",
 };
 
 const EFFECTIVE_DATE = "November 25, 2026";
+const EMAIL = "30daysonthemount@gmail.com";
 
+// The text-message sections below are registered wording for the SMS
+// program (A2P 10DLC): keep the program description, frequency, rates,
+// STOP/HELP, carrier liability and consent lines intact, and keep the
+// operating company named once in "Who we are".
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-background px-4 py-16 text-foreground">
-      <article className="prose prose-invert prose-headings:font-semibold prose-a:text-primary mx-auto max-w-3xl">
-        <h1>Terms and Conditions</h1>
-        <p className="text-muted-foreground">Effective date: {EFFECTIVE_DATE}</p>
+    <SitePage>
+      <LegalPage title="Terms of Use" effective={EFFECTIVE_DATE}>
+        <div className="site-summary">
+          <p style={{ marginTop: 0 }}>
+            <strong>In short:</strong> 30 Days on the Mount is a free, thirty-day journey through the Sermon on the Mount.
+            Use it for your own reflection, treat others in Community with care, and know that the companion and studies are
+            written with AI and aren&apos;t a substitute for a pastor, counselor or doctor. You can delete your account at any
+            time.
+          </p>
+        </div>
 
+        <h2>Who we are</h2>
         <p>
-          These Terms and Conditions (&ldquo;Terms&rdquo;) govern your participation in the 30 Days on the Mount
-          mobile messaging program (the &ldquo;Program&rdquo;), operated by{" "}
-          <strong>The Matterworks LLC</strong> (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;), doing
-          business as 30 Days on the Mount. By opting in to the Program, you agree to these Terms. If you do not
-          agree, do not opt in, or reply STOP to end your participation at any time.
+          These Terms of Use (&ldquo;Terms&rdquo;) cover your use of 30 Days on the Mount (&ldquo;we,&rdquo; &ldquo;us&rdquo;)
+          — the mobile app, the website at 30daysonthemount.com, and the optional text-message program (together, the
+          &ldquo;Service&rdquo;). 30 Days on the Mount is operated by The Matterworks LLC. By creating an account, using the
+          app, or texting our number, you agree to these Terms and to our <a href="/privacy">Privacy Policy</a>. If you
+          don&apos;t agree, please don&apos;t use the Service.
         </p>
 
-        <h2>The Program</h2>
+        <h2>The journey</h2>
         <p>
-          The Program delivers a 30-day series of daily text messages by SMS, consisting of
-          scriptural reflections drawn from the Sermon on the Mount, a daily invitation and practice, and
-          interactive check-ins. You may reply to any message to ask a question, share a reflection, or receive the
-          full text of that day&apos;s teaching. Message frequency varies — typically one to two messages per day
-          during active participation — and depends on your own replies and preferences.
+          The Service guides you through Matthew 5–7, one day at a time, for thirty days: a daily passage and teaching,
+          optional midday and evening invitations, reflection, a conversational companion, the Bible with verse studies,
+          ambient music, and Community features. The Service is free. We may change, add or remove features over time.
         </p>
 
-        <h2>SMS Communications</h2>
+        <h2>Your account</h2>
         <ul>
           <li>
-            <strong>Program Description:</strong> 30 Days on the Mount provides daily reflection links and
-            interactive coaching via SMS.
+            You can sign in with Apple, with your email address, or with your phone number. Please give accurate information
+            and keep access to your sign-in method secure. You are responsible for what happens under your account.
           </li>
+          <li>One account per person. Don&apos;t create accounts for others, or fake or duplicate accounts.</li>
           <li>
-            <strong>Message Frequency:</strong> Message frequency varies.
-          </li>
-          <li>
-            <strong>Pricing:</strong> Message and data rates may apply.
-          </li>
-          <li>
-            <strong>Opt-Out:</strong> You can cancel the SMS service at any time. Just text &quot;STOP&quot; to +1
-            (323) 747-7471. After you send the SMS message &quot;STOP&quot; to us, we will send you an SMS message to
-            confirm that you have been unsubscribed. After this, you will no longer receive SMS messages from us. If
-            you want to join again, just sign up as you did the first time.
-          </li>
-          <li>
-            <strong>Help:</strong> If you are experiencing issues with the messaging program you can reply with the
-            keyword &quot;HELP&quot; for more assistance, or you can get help directly at{" "}
-            <a href="mailto:30daysonthemount@gmail.com">30daysonthemount@gmail.com</a>.
-          </li>
-          <li>
-            <strong>Carrier Liability:</strong> Carriers are not liable for delayed or undelivered messages.
-          </li>
-          <li>
-            <strong>Consent:</strong> By texting a keyword to opt in, you give your express consent to receive
-            recurring automated text messages from 30 Days on the Mount. Consent to receive text messages is not a
-            condition of purchasing any goods or services. The Program is free to join.
+            You can delete your account at any time in the app (Profile → Delete account). That permanently removes your
+            journey, reflections, highlights and conversations, as described in our Privacy Policy.
           </li>
         </ul>
 
-        <h2>Eligibility and Opt-In</h2>
+        <h2>Who can use it</h2>
         <p>
-          You join the Program by sending a text-message keyword — <strong>START</strong> or{" "}
-          <strong>MOUNTAIN</strong> — to +1 (323) 747-7471. There is no web form and no purchase; texting the
-          keyword is your affirmative, express consent to receive recurring automated messages, and that consent is
-          not a condition of any purchase.
-        </p>
-        <p>
-          You must be at least 18 years old, or have the consent of a parent or legal guardian, and be the account
-          holder or have the account holder&apos;s permission for the mobile number you provide, to join the
-          Program.
+          You must be at least 13 years old to use the Service. If you are under 18, you need a parent or guardian&apos;s
+          permission. Being matched into a walking group with other members you don&apos;t know is only for people 18 and
+          older, and you&apos;ll be asked to confirm your age first.
         </p>
 
-        <h2>Message and Data Rates</h2>
+        <h2>The companion, studies and AI</h2>
         <p>
-          <strong>Message and data rates may apply.</strong> The number of messages you receive will vary based on
-          your participation and replies. Message frequency is recurring. Contact your wireless carrier for details
-          about your text and data plan. We are not responsible for any charges billed to you by your carrier.
+          The companion&apos;s replies, voice conversations, verse studies and some of the daily content are generated with
+          artificial intelligence. We work to make them faithful and careful, but they can be wrong, incomplete or
+          unsuitable for your situation. They are offered for reflection and learning, and are not pastoral, medical,
+          psychological, legal or financial advice. Please bring important questions to people you trust.
+        </p>
+        <p>
+          <strong>If you are in crisis</strong> or thinking about harming yourself, call or text 988 (in the United States)
+          or call 911 in an emergency. The Service is not a crisis service.
         </p>
 
-        <h2>Opt-Out and Help</h2>
-        <ul>
-          <li>
-            <strong>To opt out at any time,</strong> reply <strong>STOP</strong>, <strong>UNSUBSCRIBE</strong>, or{" "}
-            <strong>CANCEL</strong> to any message. You will receive a one-time confirmation that you&apos;ve been
-            unsubscribed, and you will not receive further Program messages unless you opt back in. You may rejoin
-            at any time by messaging us again.
-          </li>
-          <li>
-            <strong>For help,</strong> reply <strong>HELP</strong> at any time, or contact us at{" "}
-            <a href="mailto:30daysonthemount@gmail.com">30daysonthemount@gmail.com</a>.
-          </li>
-        </ul>
+        <h2>Community</h2>
         <p>
-          Supported carriers are not liable for delayed or undelivered messages. Not all mobile devices or carriers
-          may support every feature of the Program.
-        </p>
-
-        <h2>User Conduct</h2>
-        <p>You agree not to use the Program to:</p>
-        <ul>
-          <li>Send us unlawful, threatening, abusive, or harassing content.</li>
-          <li>Attempt to interfere with, disrupt, or gain unauthorized access to the Program or our systems.</li>
-          <li>Impersonate another person or misrepresent your affiliation with any person or entity.</li>
-          <li>Use the Program for any purpose other than your own personal participation in the practice.</li>
-          <li>Harass, threaten, exploit, or seek to meet or contact other members outside the Program against the Community Guidelines.</li>
-        </ul>
-        <p>
-          We may suspend or terminate your access to the Program, without notice, if we reasonably believe you have
-          violated these Terms.
-        </p>
-
-        <h2>Intellectual Property</h2>
-        <p>
-          All content delivered through the Program — including the daily invitations, synopses, guided practices,
-          and original commentary — is owned by us or our licensors and is protected by copyright and other
-          intellectual property laws. You may use this content for your own personal, non-commercial reflection.
-          You may not reproduce, redistribute, publish, or create derivative works from it for any commercial
-          purpose without our prior written permission. Scripture quotations remain the property of their
-          respective copyright holders where applicable.
-        </p>
-        <p>
-          You keep ownership of what you share in Community — reflections, messages, photos, videos and voice messages
-          (&ldquo;your content&rdquo;). You grant us a non-exclusive, worldwide, royalty-free license to store, screen,
-          transcribe, moderate, and display your content to the people you share it with, only to operate the Program.
-          You confirm your content is yours to share and that sharing it doesn&apos;t infringe anyone else&apos;s rights.
-        </p>
-
-        <h2>The App and Community</h2>
-        <p>
-          The 30 Days on the Mount app offers the same journey along with Community features: sharing reflections with
-          others walking the same day, walking groups with friends, and, for members 18 or older, small groups matched
-          with other members on nearby days. Your use of Community is governed by our{" "}
-          <a href="/community-guidelines">Community Guidelines</a>, which form part of these Terms.
+          Community lets you share reflections with others walking the same day, walk in groups with friends, and, if
+          you&apos;re 18 or older, be matched into a small group with others on nearby days. Your use of Community is governed
+          by our <a href="/community-guidelines">Community Guidelines</a>, which are part of these Terms.
         </p>
         <ul>
           <li>
-            Everything shared in Community is screened before others see it, by an automated system (an AI model) and,
-            where needed, by people on our team. Voice messages and the sound of videos are transcribed for screening. We
-            may remove any content that breaks these Terms or the Community Guidelines.
+            Everything shared in Community — words, photos, videos and voice messages — is screened before others see it, by
+            an automated system (an AI model) and, where needed, by people on our team. Voice messages and the sound of videos
+            are transcribed for screening. We may remove anything that breaks these Terms or the Community Guidelines.
           </li>
           <li>
-            Breaking the Community Guidelines leads to warnings, a pause on posting, removal from Community, or suspension
-            of your account, as described in the Community Guidelines. We may act immediately for serious violations, and
-            may report content to authorities where the law requires or someone&apos;s safety is at risk.
+            Breaking the Community Guidelines leads to a warning, a pause on posting, removal from Community, or suspension
+            of your account, as the Guidelines describe. We may act immediately for serious violations, and may report
+            content to authorities where the law requires it or someone&apos;s safety is at risk.
           </li>
           <li>
-            Other members are not our employees or agents, and we are not responsible for what they say or do, though we
-            work to keep Community safe. Community is not professional counseling or crisis care. If you are in crisis,
-            call or text 988, or call 911 in an emergency.
+            Other members are not our employees or representatives, and we aren&apos;t responsible for what they say or do,
+            though we work hard to keep Community safe. You can report anything, and leave any group, at any time.
           </li>
-          <li>You may report content or leave any group at any time, and appeal any decision by writing to us.</li>
         </ul>
 
-        <h2>Disclaimer of Warranties</h2>
+        <h2>What you share</h2>
         <p>
-          The Program is provided &ldquo;as is&rdquo; and &ldquo;as available,&rdquo; without warranties of any
-          kind, whether express or implied, including any warranty of merchantability, fitness for a particular
-          purpose, or non-infringement. We do not warrant that the Program will be uninterrupted, timely, secure,
-          or error-free, or that any AI-assisted response will be accurate, complete, or appropriate for your
-          particular circumstances. The Program is offered for reflective and educational purposes and is not a
-          substitute for professional pastoral, medical, psychological, or legal advice.
+          You own what you write, record and share (&ldquo;your content&rdquo;). You give us a non-exclusive, worldwide,
+          royalty-free license to store, process, screen, transcribe and display your content, only to run the Service — for
+          example, to show your reflection to the people you shared it with, or to let the companion respond to it. Private
+          reflections stay private. You confirm that your content is yours to share and doesn&apos;t infringe anyone
+          else&apos;s rights, and that photos or recordings of other people are shared with their permission.
         </p>
 
-        <h2>Limitation of Liability</h2>
+        <h2>Acceptable use</h2>
+        <p>Please don&apos;t:</p>
+        <ul>
+          <li>Harass, threaten, deceive, exploit or harm anyone, or try to contact members outside the Service against the Community Guidelines.</li>
+          <li>Share anything unlawful, hateful, sexually explicit, or that infringes someone else&apos;s rights.</li>
+          <li>Impersonate anyone, or misrepresent who you are.</li>
+          <li>Use the Service to advertise, sell, fundraise, or recruit.</li>
+          <li>Interfere with the Service, probe or bypass its security, scrape it, or use bots or automated access.</li>
+          <li>Use the Service for anything other than your own personal participation.</li>
+        </ul>
+
+        <h2>Text messages</h2>
+        <p>If you choose to receive the journey by text message, these terms also apply:</p>
+        <ul>
+          <li>
+            <strong>Program description:</strong> 30 Days on the Mount provides daily reflection links and interactive
+            coaching via SMS.
+          </li>
+          <li>
+            <strong>How to join:</strong> text <strong>START</strong> or <strong>MOUNTAIN</strong> to +1 (323) 747-7471.
+            Texting the keyword is your express consent to receive recurring automated text messages from 30 Days on the
+            Mount. Consent to receive text messages is not a condition of purchasing any goods or services. The program is
+            free to join.
+          </li>
+          <li>
+            <strong>Message frequency:</strong> message frequency varies, typically one to two messages a day while you are
+            active, depending on your replies and preferences.
+          </li>
+          <li>
+            <strong>Pricing:</strong> message and data rates may apply. Contact your wireless carrier about your plan.
+          </li>
+          <li>
+            <strong>Opt-out:</strong> you can cancel at any time. Text <strong>STOP</strong>, <strong>UNSUBSCRIBE</strong> or{" "}
+            <strong>CANCEL</strong> to +1 (323) 747-7471. We&apos;ll send one message to confirm you&apos;ve been
+            unsubscribed, and then no more. To join again, text START as you did the first time.
+          </li>
+          <li>
+            <strong>Help:</strong> reply <strong>HELP</strong> at any time, or write to{" "}
+            <a href={`mailto:${EMAIL}`}>{EMAIL}</a>.
+          </li>
+          <li>
+            <strong>Carrier liability:</strong> carriers are not liable for delayed or undelivered messages.
+          </li>
+          <li>
+            <strong>Eligibility:</strong> you must be the account holder for the mobile number, or have their permission.
+          </li>
+        </ul>
+
+        <h2>Notifications</h2>
         <p>
-          To the fullest extent permitted by law, we and our officers, employees, and service providers will not be
-          liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of data,
-          use, or goodwill, arising out of or related to your use of, or inability to use, the Program, even if we
-          have been advised of the possibility of such damages. Our total liability to you for any claim arising
-          from the Program will not exceed one hundred dollars ($100).
+          The app can send notifications for your morning, midday and evening invitations and for your walking groups. You
+          can change them in Profile or turn them off in your phone&apos;s Settings.
         </p>
 
-        <h2>Changes to the Program and These Terms</h2>
+        <h2>Our content</h2>
         <p>
-          We may modify, suspend, or discontinue the Program, or update these Terms, at any time. If we make
-          material changes to these Terms, we will update the effective date above. Your continued participation in
-          the Program after a change means you accept the updated Terms.
+          The daily invitations, teachings, design, music and other materials in the Service belong to us or our licensors.
+          You may use them for your own personal, non-commercial reflection, and share them with friends, but not reproduce,
+          sell or publish them without our permission. Scripture quotations are from the Berean Standard Bible (BSB), which
+          is in the public domain.
         </p>
 
-        <h2>Governing Law</h2>
+        <h2>Apple</h2>
         <p>
-          These Terms are governed by the laws of the United States and the state in which we are established,
-          without regard to conflict-of-law principles.
+          If you use the app on an Apple device: these Terms are between you and us, not Apple, and Apple isn&apos;t
+          responsible for the app or its content. Apple has no obligation to provide maintenance or support for the app. If
+          the app fails to meet any applicable warranty, you may notify Apple, and Apple&apos;s only obligation will be to
+          refund any purchase price (the app is free). Apple isn&apos;t responsible for addressing claims about the app,
+          including product liability, legal compliance, or intellectual-property claims. Apple and its subsidiaries are
+          third-party beneficiaries of these Terms and may enforce them against you. You confirm you aren&apos;t located in
+          a country subject to a U.S. government embargo and aren&apos;t on any U.S. government list of prohibited parties.
         </p>
 
-        <h2>Contact Us</h2>
-        <p>Questions about these Terms, or about the Program generally, can be sent to:</p>
+        <h2>Ending your use</h2>
         <p>
-          The Matterworks LLC
-          <br />
-          <a href="mailto:30daysonthemount@gmail.com">30daysonthemount@gmail.com</a>
+          You can stop using the Service and delete your account at any time. We may suspend or end your access if you
+          break these Terms or the Community Guidelines, or if we need to in order to protect others or comply with the law.
         </p>
-        <p className="text-sm text-muted-foreground">
-          See also our <a href="/privacy">Privacy Policy</a>, which explains what information we collect and how we
-          use it.
+
+        <h2>Disclaimers</h2>
+        <p>
+          The Service is provided &ldquo;as is&rdquo; and &ldquo;as available,&rdquo; without warranties of any kind, whether
+          express or implied, including warranties of merchantability, fitness for a particular purpose, or non-infringement.
+          We don&apos;t promise that the Service will be uninterrupted, secure or error-free, or that AI-generated content will
+          be accurate or appropriate for your circumstances.
         </p>
-      </article>
-    </div>
+
+        <h2>Limitation of liability</h2>
+        <p>
+          To the fullest extent permitted by law, we and our officers, employees and service providers will not be liable
+          for any indirect, incidental, special, consequential or punitive damages, or any loss of data, use or goodwill,
+          arising out of or related to your use of, or inability to use, the Service, even if advised of the possibility of
+          such damages. Our total liability to you for any claim arising from the Service will not exceed one hundred
+          dollars ($100).
+        </p>
+
+        <h2>Changes</h2>
+        <p>
+          We may update these Terms as the Service grows. We&apos;ll change the effective date above and, for significant
+          changes, let you know in the app. Continuing to use the Service after a change means you accept the updated Terms.
+        </p>
+
+        <h2>Governing law</h2>
+        <p>
+          These Terms are governed by the laws of the United States and the state in which we are established, without
+          regard to conflict-of-law principles.
+        </p>
+
+        <h2>Contact</h2>
+        <p>
+          Questions about these Terms, or anything else: <a href={`mailto:${EMAIL}`}>{EMAIL}</a>.
+        </p>
+      </LegalPage>
+    </SitePage>
   );
 }

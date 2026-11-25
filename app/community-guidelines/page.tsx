@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { LegalPage } from "@/components/site/SiteChrome";
+import { SitePage } from "@/components/site/SitePage";
 
 export const metadata: Metadata = {
   title: "Community Guidelines — 30 Days on the Mount",
@@ -12,10 +14,8 @@ const EMAIL = "30daysonthemount@gmail.com";
 // one, change the other.
 export default function CommunityGuidelinesPage() {
   return (
-    <div className="min-h-screen bg-background px-4 py-16 text-foreground">
-      <article className="prose prose-invert prose-headings:font-semibold prose-a:text-primary mx-auto max-w-3xl">
-        <h1>Community Guidelines</h1>
-        <p className="text-muted-foreground">Effective date: {EFFECTIVE_DATE}</p>
+    <SitePage>
+      <LegalPage title="Community Guidelines" effective={EFFECTIVE_DATE}>
 
         <p>
           Community is the part of 30 Days on the Mount where people walk the Sermon on the Mount together: reflections
@@ -141,7 +141,7 @@ export default function CommunityGuidelinesPage() {
           We may update these guidelines as Community grows. We&apos;ll change the effective date above, and tell you in
           the app when a change is significant.
         </p>
-      </article>
-    </div>
+      </LegalPage>
+    </SitePage>
   );
 }
