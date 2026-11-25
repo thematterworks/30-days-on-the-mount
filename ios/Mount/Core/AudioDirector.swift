@@ -179,6 +179,7 @@ final class AudioDirector {
         }
     }
 
+
     // MARK: Recording
 
     /// The microphone would hear the music, so it rests while someone
@@ -199,12 +200,21 @@ final class AudioDirector {
     /// Reasons are counted, so overlapping sources don't restore it early.
     func duck(_ reason: String) {
         duckReasons.insert(reason)
+        guard isPlayingAmbient else { return }
         fade(to: Self.duckedVolume, over: 0.6)
     }
 
     func unduck(_ reason: String) {
         duckReasons.remove(reason)
-        if ambientPlayer?.timeControlStatus != .paused { fade(to: targetVolume, over: 1.5) }
+        guard isPlayingAmbient else { return }
+        fade(to: targetVolume, over: 1.5)
+    }
+
+    /// Whether the music should be heard at all right now. A fade only ever
+    /// moves the volume while this holds, so ducking can't revive music the
+    /// participant has turned off.
+    private var isPlayingAmbient: Bool {
+        isAmbientOn && isForeground && ambientPlayer?.timeControlStatus != .paused
     }
 
     // MARK: Voice
