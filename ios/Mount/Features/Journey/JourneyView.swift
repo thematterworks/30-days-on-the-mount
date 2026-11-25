@@ -35,8 +35,10 @@ struct JourneyView: View {
             }
             .scrollTargetLayout()
         }
-        .scrollTargetBehavior(.paging)
-        .scrollPosition(id: $focusedDay)
+        // Snaps to the pages themselves; .paging counts in scroll-view
+        // heights, which the header inset knocks out of step with the pages.
+        .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
+        .scrollPosition(id: $focusedDay, anchor: .top)
         .scrollIndicators(.hidden)
         .sensoryFeedback(.selection, trigger: focusedDay)
         .safeAreaInset(edge: .top, spacing: 0) { HubHeader() }

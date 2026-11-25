@@ -23,7 +23,7 @@ struct RootView: View {
         .zoeAtmosphere()
         .overlay {
             if isShowingSplash {
-                SplashView { withAnimation(.easeInOut(duration: 0.5)) { isShowingSplash = false } }
+                SplashView { withAnimation(.easeInOut(duration: 1.4)) { isShowingSplash = false } }
                     .transition(.opacity)
             }
         }

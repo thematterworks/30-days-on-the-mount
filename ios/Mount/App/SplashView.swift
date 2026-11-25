@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// The moment the app opens: the mountain line draws itself across the
-/// gradient, the name comes up beneath it, and it all gives way to the app.
-/// About a second — long enough to arrive, short enough not to wait on.
+/// gradient, the name comes up beneath it, a breath of stillness, and it all
+/// dissolves into the app. Unhurried on purpose: it's the threshold into a
+/// quiet place, not a loading screen.
 struct SplashView: View {
     let onFinish: () -> Void
 
@@ -36,11 +37,11 @@ struct SplashView: View {
             if reduceMotion {
                 reveal = 1
                 showsName = true
-                try? await Task.sleep(for: .milliseconds(600))
+                try? await Task.sleep(for: .milliseconds(2000))
             } else {
-                withAnimation(.easeInOut(duration: 0.8)) { reveal = 1 }
-                withAnimation(.easeOut(duration: 0.4).delay(0.45)) { showsName = true }
-                try? await Task.sleep(for: .milliseconds(1100))
+                withAnimation(.easeInOut(duration: 2.4).delay(0.3)) { reveal = 1 }
+                withAnimation(.easeInOut(duration: 1.4).delay(1.9)) { showsName = true }
+                try? await Task.sleep(for: .milliseconds(4000))
             }
             onFinish()
         }
