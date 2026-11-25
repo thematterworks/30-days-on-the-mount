@@ -4,7 +4,9 @@ import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { verifyParticipantSessionToken } from "@/lib/participant-auth";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { signInMethod } from "@/lib/mobile-accounts";
 import { isSpeechConfigured } from "@/lib/speech";
+import { isVoiceChatConfigured } from "@/lib/voice-chat";
 import type { UserRow } from "@/lib/supabase/types";
 
 /**
@@ -104,6 +106,7 @@ export function participantPayload(user: UserRow) {
     timezone: user.timezone,
     preferredHour: user.preferred_delivery_hour,
     channel: user.channel,
-    features: { voice: isSpeechConfigured() },
+    signInMethod: signInMethod(user.phone_number),
+    features: { voice: isSpeechConfigured(), voiceChat: isVoiceChatConfigured() },
   };
 }

@@ -44,6 +44,11 @@ function normalizePhoneNumber(raw: string): string {
  * number format, same convention as lib/whatsapp.ts.
  */
 export async function sendSmsMessage(to: string, body: string, mediaUrl?: string): Promise<TwilioSendResult> {
+  // App-only accounts (Sign in with Apple, email) are keyed "apple:…" or
+  // "email:…" in the phone_number column. They never agreed to texts.
+  if (!/^\d+$/.test(to)) {
+    return { ok: false, messageId: null, error: "Not a phone number (app-only account)", code: null };
+  }
   const credentials = Buffer.from(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`).toString("base64");
   const params = new URLSearchParams({
     To: toE164(to),
