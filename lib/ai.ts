@@ -243,3 +243,93 @@ function describeAnthropicError(error: unknown): string {
   }
   return error instanceof Error ? `AI Engine error: ${error.message}` : "AI Engine error: unknown failure";
 }
+
+// MARK: - Scripture study
+
+export interface ScriptureStudy {
+  summary: string;
+  context: string;
+  words: { word: string; original: string; transliteration: string; meaning: string }[];
+  connections: { reference: string; note: string }[];
+  kingdom: string;
+  question: string;
+}
+
+const STUDY_SYSTEM_PROMPT = `You are a careful, warm Bible teacher writing a short study of a passage for 30 Days on the Mount, a thirty-day journey through the Sermon on the Mount. The reader may be new to scripture. Your aim is to train them to read slowly and think about what the text actually says.
+
+Write in plain, warm language without jargon. Accuracy matters more than flourish:
+- Word studies give only well-established meanings of the Greek or Hebrew words, as a standard lexicon would. No speculative etymology, no invented nuance. Use the original script and a simple transliteration. If you are unsure of a word, leave it out.
+- Context covers who is speaking, to whom, where the passage sits in its book, and anything about the historical setting that genuinely changes how it reads.
+- Connections are real cross-references that illuminate the passage, each with one line on why.
+- The Kingdom section shows how the passage reveals the Gospel of the Kingdom of Heaven (the Kingdom of God): God's reign breaking into ordinary life through Jesus, and the upside-down life it makes possible. This is the heart of the journey, so draw the line clearly, but honestly: never force a connection the text doesn't carry. For Old Testament passages, show what the passage anticipates.
+- End with one honest question that invites the reader to live the passage, not just understand it.
+
+Keep each prose section to two to four sentences. Give two to four word studies and two or three connections.`;
+
+const STUDY_TOOL = {
+  name: "present_study",
+  description: "Present the study of the passage.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      summary: { type: "string", description: "What the passage says, simply." },
+      context: { type: "string", description: "Who, to whom, where in the book, and setting that matters." },
+      words: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            word: { type: "string", description: "The English word as it appears in the passage." },
+            original: { type: "string", description: "The Greek or Hebrew word in its own script." },
+            transliteration: { type: "string" },
+            meaning: { type: "string", description: "Its established meaning, and why it matters here." },
+          },
+          required: ["word", "original", "transliteration", "meaning"],
+        },
+      },
+      connections: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: { reference: { type: "string" }, note: { type: "string" } },
+          required: ["reference", "note"],
+        },
+      },
+      kingdom: { type: "string", description: "How the passage reveals the Gospel of the Kingdom of Heaven." },
+      question: { type: "string", description: "One question to carry into the day." },
+    },
+    required: ["summary", "context", "words", "connections", "kingdom", "question"],
+  },
+};
+
+/**
+ * A study of a passage: context, word studies, connections, and its
+ * bearing on the Gospel of the Kingdom. Uses Opus — it is generated once per
+ * passage and cached (lib/study.ts), so depth matters more than latency.
+ */
+export async function generateScriptureStudy(reference: string, text: string): Promise<ScriptureStudy | null> {
+  let response;
+  try {
+    response = await timed("anthropic:study", () =>
+      getClient().messages.create({
+        model: "claude-opus-5-5",
+        max_tokens: 2500,
+        system: STUDY_SYSTEM_PROMPT,
+        tools: [STUDY_TOOL],
+        // Opus 5.5 doesn't take a forced tool_choice; the prompt asks for it.
+        messages: [
+          {
+            role: "user",
+            content: `${reference} (Berean Standard Bible)\n\n${text}\n\nPresent your study with the present_study tool.`,
+          },
+        ],
+      }),
+    );
+  } catch (error) {
+    throw new AiEngineError(describeAnthropicError(error));
+  }
+  const block = response.content.find((item) => item.type === "tool_use");
+  if (!block || block.type !== "tool_use") return null;
+  return block.input as ScriptureStudy;
+}
+
