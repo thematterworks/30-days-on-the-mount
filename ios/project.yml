@@ -9,6 +9,13 @@ options:
   createIntermediateGroups: true
   generateEmptyDirectories: true
 
+packages:
+  # Spoken conversations with Qara (Features/Voice). Pinned to a release
+  # that has been out a while; v4 changed the API.
+  ElevenLabs:
+    url: https://github.com/elevenlabs/elevenlabs-swift-sdk
+    exactVersion: 3.4.0
+
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -35,11 +42,12 @@ targets:
         # Home-screen label. "30 Days on the Mount" truncates there; the App
         # Store name stays the full brand (it is set in App Store Connect).
         CFBundleDisplayName: On the Mount
-        UILaunchScreen: {}
+        UILaunchScreen:
+          UIColorName: LaunchBackground
         UIUserInterfaceStyle: Dark
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSSupportsLiveActivities: true
-        NSMicrophoneUsageDescription: Speak a reflection or a message to your companion instead of typing it.
+        NSMicrophoneUsageDescription: Speak a reflection, a message to your companion, or talk with Qara out loud.
         NSSpeechRecognitionUsageDescription: Your spoken words are turned into text on this iPhone, so you can speak a reflection instead of typing it.
         UIBackgroundModes: [remote-notification]
         ITSAppUsesNonExemptEncryption: false
@@ -51,6 +59,7 @@ targets:
       properties:
         com.apple.security.application-groups: [group.com.thematterworks.mount]
         aps-environment: development
+        com.apple.developer.applesignin: [Default]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.thematterworks.mount
@@ -58,6 +67,7 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - target: MountWidgets
+      - package: ElevenLabs
 
   MountWidgets:
     type: app-extension

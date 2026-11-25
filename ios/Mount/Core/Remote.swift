@@ -131,6 +131,8 @@ struct RemoteParticipant: Decodable, Sendable {
     struct Features: Decodable, Sendable {
         /// The server can read aloud (ELEVENLABS_API_KEY is set).
         let voice: Bool
+        /// Spoken conversations with Qara are available.
+        var voiceChat: Bool?
     }
 }
 
@@ -148,6 +150,30 @@ struct RemoteAuthService: AuthService {
         let response: Response = try await client.send(
             "POST", "api/mobile/auth/verify", body: ["phoneNumber": phoneNumber, "code": code]
         )
+        return Session(phoneNumber: response.participant.phoneNumber, token: response.token, isPreview: false)
+    }
+
+    func options() async -> AuthOptions {
+        (try? await client.get("api/mobile/auth/options")) ?? AuthOptions()
+    }
+
+    func signInWithApple(identityToken: String, firstName: String?) async throws -> Session {
+        struct Body: Encodable { let identityToken: String; let firstName: String? }
+        return try await session("api/mobile/auth/apple", body: Body(identityToken: identityToken, firstName: firstName))
+    }
+
+    func requestEmailCode(email: String) async throws {
+        let _: OK = try await client.send("POST", "api/mobile/auth/email/start", body: ["email": email])
+    }
+
+    func verifyEmail(_ email: String, code: String) async throws -> Session {
+        try await session("api/mobile/auth/email/verify", body: ["email": email, "code": code])
+    }
+
+    private struct SessionResponse: Decodable { let token: String; let participant: RemoteParticipant }
+
+    private func session<Body: Encodable>(_ path: String, body: Body) async throws -> Session {
+        let response: SessionResponse = try await client.send("POST", path, body: body)
         return Session(phoneNumber: response.participant.phoneNumber, token: response.token, isPreview: false)
     }
 }
@@ -365,6 +391,44 @@ struct RemoteAvatarService: AvatarService {
 struct PreviewAvatarService: AvatarService {
     func avatar() async throws -> RemoteAvatar? { nil }
     func save(_ avatar: RemoteAvatar, photo: Data?) async throws {}
+}
+
+// MARK: - Voice conversations
+
+/// Spoken conversations with Qara (app/api/mobile/voice). The server hands
+/// out a short-lived token and fills in who the participant is; the call
+/// runs between the phone and ElevenLabs.
+protocol VoiceService: Sendable {
+    func session(variables: [String: String]) async throws -> (token: String, variables: [String: String])
+    /// What was said, so it joins the companion history.
+    func save(transcript: [(role: String, text: String)]) async throws
+}
+
+struct RemoteVoiceService: VoiceService {
+    let client: APIClient
+
+    func session(variables: [String: String]) async throws -> (token: String, variables: [String: String]) {
+        struct Body: Encodable { let variables: [String: String] }
+        struct Response: Decodable { let token: String; let variables: [String: String] }
+        let response: Response = try await client.send("POST", "api/mobile/voice", body: Body(variables: variables))
+        return (response.token, response.variables)
+    }
+
+    func save(transcript: [(role: String, text: String)]) async throws {
+        struct Turn: Encodable { let role: String; let text: String }
+        struct Body: Encodable { let transcript: [Turn] }
+        let _: OK = try await client.send(
+            "PUT", "api/mobile/voice", body: Body(transcript: transcript.map { Turn(role: $0.role, text: $0.text) })
+        )
+    }
+}
+
+struct PreviewVoiceService: VoiceService {
+    func session(variables: [String: String]) async throws -> (token: String, variables: [String: String]) {
+        throw APIError.server("Talking with Qara needs the live server.")
+    }
+
+    func save(transcript: [(role: String, text: String)]) async throws {}
 }
 
 // MARK: - Media

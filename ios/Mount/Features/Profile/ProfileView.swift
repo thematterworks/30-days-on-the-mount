@@ -164,6 +164,11 @@ struct ProfileView: View {
     }
 
     private var formattedPhone: String {
+        switch model.session.session?.signInMethod {
+        case "apple": return "Signed in with Apple"
+        case "email": return "Signed in with email"
+        default: break
+        }
         guard let digits = model.session.session?.phoneNumber, digits.count == 11, digits.hasPrefix("1") else {
             return model.session.session?.phoneNumber ?? ""
         }

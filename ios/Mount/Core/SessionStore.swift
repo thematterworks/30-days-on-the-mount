@@ -21,7 +21,26 @@ final class SessionStore {
     }
 
     func verify(phoneNumber: String, code: String) async throws {
-        let newSession = try await auth.verify(phoneNumber: phoneNumber, code: code)
+        try start(await auth.verify(phoneNumber: phoneNumber, code: code))
+    }
+
+    func options() async -> AuthOptions {
+        await auth.options()
+    }
+
+    func signInWithApple(identityToken: String, firstName: String?) async throws {
+        try start(await auth.signInWithApple(identityToken: identityToken, firstName: firstName))
+    }
+
+    func requestEmailCode(email: String) async throws {
+        try await auth.requestEmailCode(email: email)
+    }
+
+    func verifyEmail(_ email: String, code: String) async throws {
+        try start(await auth.verifyEmail(email, code: code))
+    }
+
+    private func start(_ newSession: Session) throws {
         try KeychainStore.save(JSONEncoder().encode(newSession), account: Self.account)
         token.set(newSession.token)
         session = newSession

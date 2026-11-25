@@ -32,6 +32,8 @@ struct BundledCurriculumSource: CurriculumSource {
 // MARK: - Sign in
 
 struct Session: Codable, Equatable, Sendable {
+    /// The account's key: digits for a phone sign-in, or "apple:…" /
+    /// "email:…" for an account made without a number (lib/mobile-accounts.ts).
     let phoneNumber: String
     let token: String
     /// True for a session the preview service issued locally. Used to label
@@ -51,10 +53,30 @@ enum AuthError: LocalizedError, Equatable {
     }
 }
 
+/// The ways in the sign-in screen can offer.
+struct AuthOptions: Decodable, Sendable {
+    var phone = true
+    var apple = true
+    var email = false
+}
+
 protocol AuthService: Sendable {
+    func options() async -> AuthOptions
     /// Texts a one-time code to `phoneNumber` (canonical form).
     func requestCode(phoneNumber: String) async throws
     func verify(phoneNumber: String, code: String) async throws -> Session
+    func signInWithApple(identityToken: String, firstName: String?) async throws -> Session
+    func requestEmailCode(email: String) async throws
+    func verifyEmail(_ email: String, code: String) async throws -> Session
+}
+
+extension Session {
+    /// How this account signs in, read from its key.
+    var signInMethod: String {
+        if phoneNumber.hasPrefix("apple:") { return "apple" }
+        if phoneNumber.hasPrefix("email:") { return "email" }
+        return "phone"
+    }
 }
 
 /// Accepts any six-digit code and issues a local token. Only ever
@@ -68,6 +90,20 @@ struct PreviewAuthService: AuthService {
         try await Task.sleep(for: .milliseconds(500))
         guard code.count == 6, code.allSatisfy(\.isNumber) else { throw AuthError.invalidCode }
         return Session(phoneNumber: phoneNumber, token: "preview-\(UUID().uuidString)", isPreview: true)
+    }
+
+    func options() async -> AuthOptions { AuthOptions(email: true) }
+
+    func signInWithApple(identityToken: String, firstName: String?) async throws -> Session {
+        Session(phoneNumber: "apple:preview", token: "preview-\(UUID().uuidString)", isPreview: true)
+    }
+
+    func requestEmailCode(email: String) async throws {
+        try await Task.sleep(for: .milliseconds(500))
+    }
+
+    func verifyEmail(_ email: String, code: String) async throws -> Session {
+        try await verify(phoneNumber: "email:preview", code: code)
     }
 }
 

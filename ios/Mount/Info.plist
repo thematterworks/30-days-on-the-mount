@@ -34,7 +34,7 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Speak a reflection or a message to your companion instead of typing it.</string>
+	<string>Speak a reflection, a message to your companion, or talk with Qara out loud.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Your spoken words are turned into text on this iPhone, so you can speak a reflection instead of typing it.</string>
 	<key>NSSupportsLiveActivities</key>
@@ -44,7 +44,10 @@
 		<string>remote-notification</string>
 	</array>
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

@@ -11,6 +11,7 @@ struct BibleView: View {
     @State private var isPickingBook = false
     @State private var isSearching = false
     @State private var flash: VerseID?
+    @State private var voiceContext: VoiceContext?
 
     var body: some View {
         let bible = model.bible
@@ -53,6 +54,7 @@ struct BibleView: View {
                         highlight: { bible.toggleHighlight(selection); selection = [] },
                         copy: copySelection,
                         ask: askAboutSelection,
+                        askInWriting: writeAboutSelection,
                         clear: { selection = [] }
                     )
                     .padding(.horizontal, 16)
@@ -82,6 +84,9 @@ struct BibleView: View {
             }
         }
         .sheet(isPresented: $isPickingBook) { BookPicker() }
+        .sheet(item: $voiceContext) { context in
+            TalkWithQaraView(context: context).presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $isSearching) { BibleSearch() }
     }
 
@@ -105,6 +110,10 @@ struct BibleView: View {
             Spacer()
 
             SoundToggle()
+
+            if let book = model.bible.currentBook {
+                TalkButton(context: .bible(book: book.name, chapter: model.bible.location.chapter), compact: true)
+            }
 
             Button { isSearching = true } label: {
                 Image(systemName: "magnifyingglass")
@@ -185,7 +194,21 @@ struct BibleView: View {
         selection = []
     }
 
+    /// Ask is a conversation with Qara about the chosen verses, out loud,
+    /// when the server can make the call; otherwise it's written.
     private func askAboutSelection() {
+        guard model.voiceChatAvailable, let book = model.bible.currentBook else { return writeAboutSelection() }
+        voiceContext = .bible(
+            book: book.name,
+            chapter: model.bible.location.chapter,
+            verses: selection.sorted().map(\.verse),
+            label: model.bible.label(for: selection),
+            text: selectedText
+        )
+        selection = []
+    }
+
+    private func writeAboutSelection() {
         let label = model.bible.label(for: selection)
         let text = selectedText
         selection = []
@@ -236,6 +259,7 @@ private struct SelectionBar: View {
     let highlight: () -> Void
     let copy: () -> Void
     let ask: () -> Void
+    let askInWriting: () -> Void
     let clear: () -> Void
 
     var body: some View {
@@ -250,7 +274,10 @@ private struct SelectionBar: View {
             HStack(spacing: 10) {
                 action(isHighlighted ? "Unmark" : "Highlight", "highlighter", highlight)
                 action("Copy", "doc.on.doc", copy)
-                action("Ask", "text.bubble", ask, prominent: true)
+                action("Ask", "waveform", ask, prominent: true)
+                    .contextMenu {
+                        Button("Ask in writing", systemImage: "text.bubble", action: askInWriting)
+                    }
             }
         }
         .padding(16)

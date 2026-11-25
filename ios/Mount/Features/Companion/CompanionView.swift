@@ -76,6 +76,9 @@ struct CompanionView: View {
                 }
             }
             Spacer()
+            if let today {
+                TalkButton(context: .day(today), compact: true)
+            }
             SoundToggle()
             AvatarButton()
         }

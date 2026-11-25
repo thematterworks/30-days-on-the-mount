@@ -29,9 +29,11 @@ final class AppModel {
     let audio: AudioDirector
     let avatar: AvatarStore
     @ObservationIgnored private(set) lazy var dictation = Dictation(audio: audio)
-    @ObservationIgnored private var appliedFocus: MountFocusState?
+    let voice: QaraVoice
     /// The server can read aloud; listen buttons appear only when it can.
     private(set) var voiceAvailable = false
+    private(set) var voiceChatAvailable = false
+    private(set) var firstName: String?
 
     var selectedTab: HubTab = .journey
     var storyRoute: StoryRoute?
@@ -71,6 +73,7 @@ final class AppModel {
             account = PreviewAccountService()
             audio = AudioDirector(media: PreviewMediaService())
             avatar = AvatarStore(service: PreviewAvatarService())
+            voice = QaraVoice(service: PreviewVoiceService(), audio: audio)
         } else {
             // A 401 means the session can't be trusted any more; sign-in is
             // the only useful place to be.
@@ -83,6 +86,7 @@ final class AppModel {
             account = RemoteAccountService(client: client)
             audio = AudioDirector(media: RemoteMediaService(client: client))
             avatar = AvatarStore(service: RemoteAvatarService(client: client))
+            voice = QaraVoice(service: RemoteVoiceService(client: client), audio: audio)
             // Sessions issued by earlier preview builds were never known to
             // the server.
             if session.session?.isPreview == true { session.signOut() }
@@ -140,6 +144,8 @@ final class AppModel {
         async let avatarSync: Void = avatar.sync()
         if let participant = try? await account.participant() {
             voiceAvailable = participant.features?.voice ?? false
+            voiceChatAvailable = participant.features?.voiceChat ?? false
+            firstName = participant.firstName
             if let hour = participant.preferredHour, (5..<12).contains(hour) {
                 settings.morningHour = hour
             }
@@ -151,16 +157,20 @@ final class AppModel {
     /// The "On the Mount" Focus filter (FocusFilter.swift): while it's on,
     /// the app opens to today and keeps its music playing.
     func applyFocus(_ focus: MountFocusState = .load()) {
-        // Once per change of Focus: turning the music off while the Focus is
-        // on has to stick when the app comes back to the foreground.
-        guard focus != appliedFocus else { return }
-        appliedFocus = focus
+        // Once per change of Focus, remembered across launches: iOS can run
+        // the filter on its own with its defaults, and turning the music off
+        // has to stick however often the app reopens afterwards.
+        guard focus != MountFocusState.lastApplied else { return }
+        MountFocusState.lastApplied = focus
         guard focus.isActive, session.session != nil, hasBeenWelcomed else { return }
         if focus.openToToday {
             storyRoute = nil
             isProfilePresented = false
             selectedTab = .journey
         }
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-silent") { return }
+        #endif
         if focus.playAmbient, !audio.isAmbientOn { audio.isAmbientOn = true }
     }
 
@@ -234,8 +244,9 @@ final class AppModel {
 
     /// Two letters for the avatar until profiles carry a name and photo.
     var profileInitials: String {
-        guard let phone = session.session?.phoneNumber else { return "·" }
-        return String(phone.suffix(2))
+        guard let session = session.session else { return "·" }
+        if session.signInMethod != "phone" { return firstName.map { String($0.prefix(1)).uppercased() } ?? "·" }
+        return String(session.phoneNumber.suffix(2))
     }
 
     func open(_ link: DeepLink) {
