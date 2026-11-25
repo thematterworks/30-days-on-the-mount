@@ -4,6 +4,7 @@ struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.scenePhase) private var scenePhase
     @Namespace private var zoom
+    @State private var isShowingSplash = true
 
     var body: some View {
         @Bindable var model = model
@@ -20,6 +21,12 @@ struct RootView: View {
             }
         }
         .zoeAtmosphere()
+        .overlay {
+            if isShowingSplash {
+                SplashView { withAnimation(.easeInOut(duration: 0.5)) { isShowingSplash = false } }
+                    .transition(.opacity)
+            }
+        }
         .task { await model.journey.load() }
         .task { await model.bible.load() }
         // On sign-in, and whenever the app comes back: the morning may have

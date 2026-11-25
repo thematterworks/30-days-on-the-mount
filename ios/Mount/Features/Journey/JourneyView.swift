@@ -13,7 +13,9 @@ struct JourneyView: View {
     var body: some View {
         let journey = model.journey
         ScrollView(.vertical) {
-            LazyVStack(spacing: 0) {
+            // Not lazy: opening on a late day, a lazy stack has to guess the
+            // heights above it and comes to rest between two pages.
+            VStack(spacing: 0) {
                 ForEach(journey.days) { day in
                     DayPage(day: day, zoomNamespace: zoomNamespace)
                         .containerRelativeFrame(.vertical)
@@ -34,13 +36,16 @@ struct JourneyView: View {
             .scrollTargetLayout()
         }
         .scrollTargetBehavior(.paging)
-        .scrollPosition(id: $focusedDay, anchor: .center)
+        .scrollPosition(id: $focusedDay)
         .scrollIndicators(.hidden)
         .sensoryFeedback(.selection, trigger: focusedDay)
         .safeAreaInset(edge: .top, spacing: 0) { HubHeader() }
         .overlay(alignment: .bottom) { returnToToday }
-        .onAppear { focusedDay = journey.progress.currentDay }
-        .onChange(of: journey.days.count) { focusedDay = journey.progress.currentDay }
+        // Once the pages are laid out, open on today.
+        .task(id: journey.days.count) {
+            await Task.yield()
+            focusedDay = journey.progress.currentDay
+        }
         .onChange(of: journey.progress.currentDay) { _, day in
             withAnimation(.smooth(duration: 0.8)) { focusedDay = day }
         }

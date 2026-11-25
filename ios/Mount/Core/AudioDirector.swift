@@ -28,7 +28,15 @@ final class AudioDirector {
     var isAmbientOn: Bool {
         didSet {
             SharedStore.defaults.set(isAmbientOn, forKey: Self.ambientKey)
-            isAmbientOn ? startAmbient() : stopAmbient()
+            // Tapping it on is a clear request: play even if another app's
+            // audio is around, and on a fresh session (dictation or a call
+            // may have changed it).
+            if isAmbientOn {
+                configureSession()
+                startAmbient(requested: true)
+            } else {
+                stopAmbient()
+            }
         }
     }
     private(set) var tracks: [Track] = AudioDirector.fallbackTracks
@@ -110,16 +118,16 @@ final class AudioDirector {
 
     // MARK: Ambient
 
-    private func startAmbient() {
+    private func startAmbient(requested: Bool = false) {
         guard isAmbientOn, isForeground, !tracks.isEmpty else { return }
-        // Someone else's music is playing: let it be.
-        guard !AVAudioSession.sharedInstance().secondaryAudioShouldBeSilencedHint else { return }
-        if let ambientPlayer, ambientPlayer.timeControlStatus != .paused {
-            return
-        }
+        // Someone else's music is playing: let it be, unless the participant
+        // just asked for ours.
+        guard requested || !AVAudioSession.sharedInstance().secondaryAudioShouldBeSilencedHint else { return }
         if ambientPlayer == nil { load(trackIndex) }
+        // Always play and fade up — even mid fade-out, which a quick
+        // off-then-on would otherwise leave to finish in silence.
         ambientPlayer?.play()
-        fade(to: targetVolume, over: 2.5)
+        fade(to: targetVolume, over: requested ? 1.2 : 2.5)
     }
 
     private func stopAmbient(fade shouldFade: Bool = true) {

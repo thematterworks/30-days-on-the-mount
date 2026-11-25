@@ -47,6 +47,13 @@ struct MountFocusState: Codable, Equatable, Sendable {
     var isActive: Bool { openToToday || playAmbient }
 
     private static let key = "focus.state.v1"
+    private static let appliedKey = "focus.applied.v1"
+
+    /// The Focus state the app last acted on.
+    static var lastApplied: MountFocusState? {
+        get { SharedStore.defaults.data(forKey: appliedKey).flatMap { try? JSONDecoder().decode(MountFocusState.self, from: $0) } }
+        set { SharedStore.defaults.set(newValue.flatMap { try? JSONEncoder().encode($0) }, forKey: appliedKey) }
+    }
 
     func save() {
         if let data = try? JSONEncoder().encode(self) { SharedStore.defaults.set(data, forKey: Self.key) }
