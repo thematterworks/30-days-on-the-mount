@@ -37,8 +37,10 @@ struct LibraryContent: Codable, Sendable {
 /// have walked this way before. Set like the layouts — type on the gradient,
 /// no cards.
 struct LibraryView: View {
+    @Environment(AppModel.self) private var model
     @State private var content = LibraryContent.bundled()
     @State private var voice: String?
+    @State private var highlights: [BibleVerse] = []
 
     var body: some View {
         ScrollView {
@@ -52,6 +54,8 @@ struct LibraryView: View {
                 .padding(.horizontal, 28)
                 .padding(.top, 12)
 
+                if !highlights.isEmpty { highlightShelf }
+
                 voices
                 shelf("Teachings", systemImage: "play.circle", items: content.teachings,
                       empty: "Teachings from pastors and theologians on the Sermon are being gathered. They will appear here.")
@@ -63,6 +67,41 @@ struct LibraryView: View {
         .scrollIndicators(.hidden)
         .softScrollEdges()
         .safeAreaInset(edge: .top, spacing: 0) { HubHeader(onTapTitle: nil) }
+        .task(id: model.bible.highlights) { highlights = await model.bible.highlightedVerses() }
+    }
+
+    /// The verses highlighted in the Bible, in Bible order; each opens
+    /// where it stands.
+    private var highlightShelf: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label("Your highlights", systemImage: "highlighter")
+                .zoeLabelStyle(Zoe.peach)
+                .padding(.horizontal, 28)
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(highlights) { verse in
+                    Button {
+                        Task { await model.bible.open(ChapterRef(book: verse.book, chapter: verse.chapter), focus: verse.number) }
+                        model.selectedTab = .bible
+                    } label: {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(model.bible.label(for: verse.id)).zoeLabelStyle()
+                            Text(verse.text)
+                                .font(.zoeSerif(.body))
+                                .foregroundStyle(Zoe.ink.opacity(0.9))
+                                .lineSpacing(4)
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(4)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 14)
+                        .padding(.horizontal, 28)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    Rectangle().fill(Zoe.locked).frame(height: 0.5).padding(.horizontal, 28)
+                }
+            }
+        }
     }
 
     private var voices: some View {

@@ -45,6 +45,7 @@ struct AvatarPicker: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var photoItem: PhotosPickerItem?
+    @State private var framing: FramingPhoto?
     @State private var tone: AvatarStore.Tone = .peach
 
     var body: some View {
@@ -125,12 +126,23 @@ struct AvatarPicker: View {
             .onChange(of: photoItem) { _, item in
                 guard let item else { return }
                 Task {
-                    if let data = try? await item.loadTransferable(type: Data.self) { avatar.setPhoto(data) }
+                    if let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) {
+                        framing = FramingPhoto(image: image)
+                    }
                     photoItem = nil
                 }
             }
         }
+        .fullScreenCover(item: $framing) { photo in
+            PhotoFramer(image: photo.image) { avatar.setFramedPhoto($0) }
+        }
         .presentationBackground { ZoeAtmosphere(glow: 0.25) }
         .presentationDetents([.large])
     }
+}
+
+/// A chosen photo waiting to be framed.
+private struct FramingPhoto: Identifiable {
+    let id = UUID()
+    let image: UIImage
 }

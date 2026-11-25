@@ -32,6 +32,7 @@ final class AppModel {
     let avatar: AvatarStore
     @ObservationIgnored private(set) lazy var dictation = Dictation(audio: audio)
     let voice: VoiceConversation
+    let study: any StudyService
     /// The server can read aloud; listen buttons appear only when it can.
     private(set) var voiceAvailable = false
     private(set) var voiceChatAvailable = false
@@ -78,6 +79,7 @@ final class AppModel {
             audio = AudioDirector(media: PreviewMediaService())
             avatar = AvatarStore(service: PreviewAvatarService())
             voice = VoiceConversation(service: PreviewVoiceService(), audio: audio)
+            study = PreviewStudyService()
         } else {
             // A 401 means the session can't be trusted any more; sign-in is
             // the only useful place to be.
@@ -91,6 +93,7 @@ final class AppModel {
             audio = AudioDirector(media: RemoteMediaService(client: client))
             avatar = AvatarStore(service: RemoteAvatarService(client: client))
             voice = VoiceConversation(service: RemoteVoiceService(client: client), audio: audio)
+            study = RemoteStudyService(client: client)
             // Sessions issued by earlier preview builds were never known to
             // the server.
             if session.session?.isPreview == true { session.signOut() }

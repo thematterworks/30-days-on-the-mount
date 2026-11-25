@@ -12,6 +12,7 @@ struct BibleView: View {
     @State private var isSearching = false
     @State private var flash: VerseID?
     @State private var voiceContext: VoiceContext?
+    @State private var studying: StudyRequest?
 
     var body: some View {
         let bible = model.bible
@@ -26,6 +27,7 @@ struct BibleView: View {
             TalkView(context: context).presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isSearching) { BibleSearch() }
+        .sheet(item: $studying) { request in StudyView(request: request) }
     }
 
     private func reader(_ bible: BibleStore) -> some View {
@@ -68,6 +70,7 @@ struct BibleView: View {
                         copy: copySelection,
                         ask: askAboutSelection,
                         askInWriting: writeAboutSelection,
+                        study: studySelection,
                         clear: { selection = [] }
                     )
                     .padding(.horizontal, 16)
@@ -237,6 +240,11 @@ struct BibleView: View {
         selection = []
     }
 
+    private func studySelection() {
+        studying = StudyRequest(reference: model.bible.label(for: selection), text: selectedText)
+        selection = []
+    }
+
     private func writeAboutSelection() {
         let label = model.bible.label(for: selection)
         let text = selectedText
@@ -289,6 +297,7 @@ private struct SelectionBar: View {
     let copy: () -> Void
     let ask: () -> Void
     let askInWriting: () -> Void
+    let study: () -> Void
     let clear: () -> Void
 
     var body: some View {
@@ -300,9 +309,10 @@ private struct SelectionBar: View {
                     .foregroundStyle(Zoe.inkMuted)
                     .accessibilityLabel("Clear selection")
             }
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 action(isHighlighted ? "Unmark" : "Highlight", "highlighter", highlight)
                 action("Copy", "doc.on.doc", copy)
+                action("Study", "text.magnifyingglass", study)
                 action("Ask", "waveform", ask, prominent: true)
                     .contextMenu {
                         Button("Ask in writing", systemImage: "text.bubble", action: askInWriting)
@@ -315,11 +325,13 @@ private struct SelectionBar: View {
 
     private func action(_ title: String, _ icon: String, _ perform: @escaping () -> Void, prominent: Bool = false) -> some View {
         Button(action: perform) {
-            Label(title, systemImage: icon)
-                .font(.footnote.weight(.medium))
-                .frame(maxWidth: .infinity, minHeight: 40)
-                .background(prominent ? Zoe.peach : Zoe.ink.opacity(0.08), in: Capsule())
-                .foregroundStyle(prominent ? Zoe.navy : Zoe.ink)
+            VStack(spacing: 4) {
+                Image(systemName: icon).font(.callout)
+                Text(title).font(.caption2.weight(.medium))
+            }
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background(prominent ? Zoe.peach : Zoe.ink.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .foregroundStyle(prominent ? Zoe.navy : Zoe.ink)
         }
         .buttonStyle(.plain)
     }

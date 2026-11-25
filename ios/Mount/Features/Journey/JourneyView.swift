@@ -10,6 +10,7 @@ struct JourneyView: View {
     @Environment(AppModel.self) private var model
     @State private var focusedDay: Int?
     @State private var isPickingDay = false
+    @State private var isRewatchingWelcome = false
 
     var body: some View {
         let journey = model.journey
@@ -18,6 +19,9 @@ struct JourneyView: View {
         VStack(spacing: 0) {
             HubHeader { isPickingDay = true }
             pages(journey)
+        }
+        .fullScreenCover(isPresented: $isRewatchingWelcome) {
+            WelcomeView { isRewatchingWelcome = false }
         }
         .sheet(isPresented: $isPickingDay) {
             DayPicker { day in withAnimation(.smooth(duration: 0.6)) { focusedDay = day } }
@@ -29,6 +33,10 @@ struct JourneyView: View {
             // Not lazy: opening on a late day, a lazy stack has to guess the
             // heights above it and comes to rest between two pages.
             VStack(spacing: 0) {
+                // One page above Day 1: the welcome, to watch again.
+                WelcomeAgainPage { isRewatchingWelcome = true }
+                    .containerRelativeFrame(.vertical)
+                    .id(JourneyView.welcomeID)
                 ForEach(journey.days) { day in
                     DayPage(day: day, zoomNamespace: zoomNamespace)
                         .containerRelativeFrame(.vertical)
@@ -72,12 +80,13 @@ struct JourneyView: View {
     }
 
     static let summitID = 1_000
+    static let welcomeID = 0
 
     /// Appears only when the participant has wandered away from today.
     @ViewBuilder
     private var returnToToday: some View {
         let today = model.journey.progress.currentDay
-        if let focusedDay, focusedDay != today, focusedDay != Self.summitID {
+        if let focusedDay, focusedDay != today, focusedDay != Self.summitID, focusedDay != Self.welcomeID {
             Button {
                 withAnimation(.smooth(duration: 0.9)) { self.focusedDay = today }
             } label: {
@@ -278,3 +287,45 @@ private struct ReflectionRecord: View {
         .presentationBackground { ZoeAtmosphere(glow: 0.3) }
     }
 }
+
+/// Above Day 1: where it began. The welcome, to watch again whenever.
+private struct WelcomeAgainPage: View {
+    let onWatch: () -> Void
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Spacer()
+            Image("MountainLine")
+                .resizable()
+                .renderingMode(.template)
+                .scaledToFit()
+                .frame(width: 120)
+                .foregroundStyle(Zoe.ink.opacity(0.7))
+            Text("Where it began").zoeLabelStyle(Zoe.peach)
+            Text("The welcome")
+                .font(.zoeDisplay(44))
+            Text("Return to the beginning: what this is, how the days work, and the film.")
+                .font(.zoeSerif(.body).italic())
+                .foregroundStyle(Zoe.inkMuted)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Button(action: onWatch) {
+                Text("Watch again")
+                    .font(.zoeSerif(.title3))
+                    .padding(.horizontal, 30)
+                    .frame(minHeight: 50)
+                    .overlay(Capsule().strokeBorder(Zoe.peach.opacity(0.6)))
+                    .foregroundStyle(Zoe.peach)
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 8)
+            Spacer()
+            Label("Day 1 is below", systemImage: "chevron.down")
+                .zoeLabelStyle()
+                .padding(.bottom, 24)
+        }
+        .padding(.horizontal, 36)
+        .frame(maxWidth: .infinity)
+    }
+}
+

@@ -11,6 +11,10 @@ import SwiftUI
 /// composed natively from the brand's own language — the mountain line, the
 /// peach light, serif words on the gradient — and moves quietly.
 struct WelcomeView: View {
+    /// Watching it again from the journey: it ends by closing, not by
+    /// beginning the journey.
+    var onReplayEnd: (() -> Void)?
+
     @Environment(AppModel.self) private var model
     @State private var scene: Int? = WelcomeView.startingScene
     @State private var isShowingFilm = false
@@ -56,8 +60,12 @@ struct WelcomeView: View {
         .zoeAtmosphere(glow: 0.7)
         .onChange(of: scene) { model.audio.stopSpeaking() }
         .fullScreenCover(isPresented: $isShowingFilm) {
-            WelcomeFilm { model.finishWelcome() }
+            WelcomeFilm { finish() }
         }
+    }
+
+    private func finish() {
+        if let onReplayEnd { onReplayEnd() } else { model.finishWelcome() }
     }
 
     private var topBar: some View {
@@ -66,8 +74,8 @@ struct WelcomeView: View {
             Spacer()
             // Someone already partway through (who began by text, say) may
             // step past it.
-            if model.journey.progress.currentDay > 1 {
-                Button("Skip") { model.finishWelcome() }
+            if onReplayEnd != nil || model.journey.progress.currentDay > 1 {
+                Button(onReplayEnd == nil ? "Skip" : "Close") { finish() }
                     .font(.footnote)
                     .foregroundStyle(Zoe.inkMuted)
             }

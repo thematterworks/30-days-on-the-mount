@@ -60,19 +60,10 @@ final class AvatarStore {
         upload()
     }
 
-    /// Takes a photo, squares and shrinks it — an avatar never needs more
-    /// than a few hundred pixels.
-    func setPhoto(_ data: Data) {
-        guard let image = UIImage(data: data) else { return }
-        let side = min(image.size.width, image.size.height)
-        let crop = CGRect(x: (image.size.width - side) / 2, y: (image.size.height - side) / 2, width: side, height: side)
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        let square = UIGraphicsImageRenderer(size: CGSize(width: 400, height: 400), format: format).image { _ in
-            image.draw(in: CGRect(x: -crop.minX * 400 / side, y: -crop.minY * 400 / side,
-                                  width: image.size.width * 400 / side, height: image.size.height * 400 / side))
-        }
-        storePhoto(square)
+    /// A photo already framed square (PhotoFramer) — kept, and sent to the
+    /// account.
+    func setFramedPhoto(_ image: UIImage) {
+        storePhoto(image)
         choice = .photo
         persist()
         upload()

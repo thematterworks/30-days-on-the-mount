@@ -83,6 +83,12 @@ final class BibleStore {
         }
     }
 
+    /// The highlighted verses, in Bible order.
+    func highlightedVerses() async -> [BibleVerse] {
+        guard let database else { return [] }
+        return (try? await database.verses(highlights.sorted())) ?? []
+    }
+
     func reference(for text: String) -> ScriptureReference.Parsed? {
         ScriptureReference.parse(text, books: books)
     }

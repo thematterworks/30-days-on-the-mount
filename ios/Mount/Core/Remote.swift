@@ -438,6 +438,61 @@ struct PreviewVoiceService: VoiceService {
     func save(transcript: [(role: String, text: String)]) async throws {}
 }
 
+// MARK: - Study
+
+/// A study of a passage (app/api/mobile/study, lib/ai.ts).
+struct ScriptureStudy: Decodable, Sendable {
+    struct Word: Decodable, Sendable, Hashable {
+        let word: String
+        let original: String
+        let transliteration: String
+        let meaning: String
+    }
+
+    struct Connection: Decodable, Sendable, Hashable {
+        let reference: String
+        let note: String
+    }
+
+    let summary: String
+    let context: String
+    let words: [Word]
+    let connections: [Connection]
+    let kingdom: String
+    let question: String
+}
+
+protocol StudyService: Sendable {
+    func study(reference: String, text: String) async throws -> ScriptureStudy
+}
+
+struct RemoteStudyService: StudyService {
+    let client: APIClient
+
+    func study(reference: String, text: String) async throws -> ScriptureStudy {
+        struct Response: Decodable { let study: ScriptureStudy }
+        let response: Response = try await client.send(
+            "POST", "api/mobile/study", body: ["reference": reference, "text": text]
+        )
+        return response.study
+    }
+}
+
+struct PreviewStudyService: StudyService {
+    func study(reference: String, text: String) async throws -> ScriptureStudy {
+        try await Task.sleep(for: .seconds(1))
+        return ScriptureStudy(
+            summary: "Jesus opens His sermon with a surprise: the people God calls blessed are the ones who know they have nothing to offer.",
+            context: "Seeing the crowds, Jesus goes up on a mountain and sits down, as a teacher would. This is the first of the Beatitudes.",
+            words: [.init(word: "poor", original: "πτωχοί", transliteration: "ptōchoi",
+                          meaning: "Destitute, dependent on others to live; often used of beggars.")],
+            connections: [.init(reference: "Isaiah 61:1", note: "Good news to the poor, coming true.")],
+            kingdom: "The kingdom opens first to people who have stopped pretending — *is*, not will be.",
+            question: "Where are you still coming to God with full hands?"
+        )
+    }
+}
+
 // MARK: - Media
 
 protocol MediaService: Sendable {
