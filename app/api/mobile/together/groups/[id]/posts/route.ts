@@ -1,19 +1,25 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { MAX_POST_LENGTH, groupPosts, isMember, sharePost } from "@/lib/community";
+import { MAX_POST_LENGTH, groupPosts, isMember, markRead, sharePost } from "@/lib/community";
 import { badRequest, getMobileParticipant, readJson, unauthorized } from "@/lib/mobile";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 
-/** A group's thread — every day, or one (?day=4). Members only. */
+/**
+ * A group's conversation, members only: the latest messages, or just the
+ * ones after ?since= while the thread is open. Reading it marks it read.
+ */
 export async function GET(request: NextRequest, ctx: RouteContext<"/api/mobile/together/groups/[id]/posts">) {
   const participant = await getMobileParticipant(request);
   if (!participant) return unauthorized();
   const groupId = (await ctx.params).id;
   if (!(await isMember(groupId, participant.phone_number))) return NextResponse.json({ error: "Not a member." }, { status: 403 });
-  const day = Number(request.nextUrl.searchParams.get("day"));
-  return NextResponse.json({ posts: await groupPosts(groupId, participant.phone_number, Number.isInteger(day) && day > 0 ? day : undefined) });
+  const since = request.nextUrl.searchParams.get("since");
+  const posts = await groupPosts(groupId, participant.phone_number, since && !Number.isNaN(Date.parse(since)) ? new Date(since).toISOString() : undefined);
+  await markRead(groupId, participant.phone_number);
+  return NextResponse.json({ posts });
 }
 
-/** Writes to the group, screened like everything shared. */
+/** Writes to the group, screened like everything shared — more strictly among strangers. */
 export async function POST(request: NextRequest, ctx: RouteContext<"/api/mobile/together/groups/[id]/posts">) {
   const participant = await getMobileParticipant(request);
   if (!participant) return unauthorized();
@@ -26,8 +32,9 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/mobile/
   if (!text) return badRequest("Write something first.");
   if (text.length > MAX_POST_LENGTH) return badRequest("That's a little long — try breaking it up.");
   const day = typeof body.dayNumber === "number" && body.dayNumber >= 1 && body.dayNumber <= 31 ? body.dayNumber : participant.current_day;
+  const { data: group } = await getSupabaseAdmin().from("walking_groups").select("kind").eq("id", groupId).maybeSingle();
 
   return NextResponse.json(
-    await sharePost({ participant, dayNumber: day, text, displayName: membership.displayName, groupId }),
+    await sharePost({ participant, dayNumber: day, text, displayName: membership.displayName, groupId, strangers: group?.kind === "matched" }),
   );
 }

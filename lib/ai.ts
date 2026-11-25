@@ -347,14 +347,22 @@ Decide one of:
 
 Reply with JSON only: {"decision": "approve" | "review" | "distress" | "reject", "note": "<a few words why>"}`;
 
+/** Added for groups of strangers the app matched together. */
+const STRANGERS_ADDENDUM = `
+
+This post is for a small group of adults who were matched as strangers. Keep them safe from each other: reject anything that shares or asks for contact details (phone numbers, emails, addresses, social media handles, other apps) or arranges to meet or talk privately elsewhere, with the note "contact details". Romantic or flirtatious advances are "reject" too.`;
+
 /**
  * Screens a community post before anyone else sees it. When the screen
  * itself fails, the post waits for a person ("review") rather than going
  * up unseen.
  */
-export async function moderateCommunityPost(text: string): Promise<{ decision: ModerationDecision; note: string }> {
+export async function moderateCommunityPost(
+  text: string,
+  options: { strangers?: boolean } = {},
+): Promise<{ decision: ModerationDecision; note: string }> {
   try {
-    const reply = await callClaude(MODERATION_PROMPT, text, 120);
+    const reply = await callClaude(MODERATION_PROMPT + (options.strangers ? STRANGERS_ADDENDUM : ""), text, 120);
     const parsed = JSON.parse(reply?.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as { decision?: string; note?: string };
     const decision = (["approve", "review", "distress", "reject"] as const).find((value) => value === parsed.decision);
     return { decision: decision ?? "review", note: (parsed.note ?? "").slice(0, 200) };

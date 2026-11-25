@@ -509,6 +509,31 @@ struct SharedPost: Decodable, Identifiable, Hashable, Sendable {
     let text: String
     let createdAt: Date
     let mine: Bool
+    /// The companion's own words — a welcome, or a nudge to a quiet group.
+    var fromCompanion: Bool = false
+
+    private enum CodingKeys: String, CodingKey { case id, dayNumber, displayName, text, createdAt, mine, fromCompanion }
+
+    init(id: String, dayNumber: Int?, displayName: String?, text: String, createdAt: Date, mine: Bool, fromCompanion: Bool = false) {
+        self.id = id
+        self.dayNumber = dayNumber
+        self.displayName = displayName
+        self.text = text
+        self.createdAt = createdAt
+        self.mine = mine
+        self.fromCompanion = fromCompanion
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        dayNumber = try container.decodeIfPresent(Int.self, forKey: .dayNumber)
+        displayName = try container.decodeIfPresent(String.self, forKey: .displayName)
+        text = try container.decode(String.self, forKey: .text)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        mine = try container.decode(Bool.self, forKey: .mine)
+        fromCompanion = try container.decodeIfPresent(Bool.self, forKey: .fromCompanion) ?? false
+    }
 }
 
 /// What happened to something shared: up now, waiting to be read, or held —
@@ -518,18 +543,39 @@ struct ShareOutcome: Decodable, Sendable {
     let outcome: Kind
     let support: Bool
     let post: SharedPost?
+    /// Why it was held, when the writer should know (e.g. contact details among strangers).
+    var notice: String?
 }
 
 struct WalkingGroup: Decodable, Identifiable, Hashable, Sendable {
+    enum Kind: String, Decodable, Sendable { case friends, matched }
     struct Member: Decodable, Hashable, Sendable {
         let name: String
         let isMe: Bool
+        let currentDay: Int?
+    }
+    struct LastMessage: Decodable, Hashable, Sendable {
+        let name: String
+        let text: String
+        let createdAt: Date
     }
     let id: String
     let name: String
-    let inviteCode: String
-    let inviteURL: URL
+    let kind: Kind
+    /// Friends' groups only; matched groups take no invitations.
+    let inviteCode: String?
+    let inviteURL: URL?
     let members: [Member]
+    let unread: Int
+    let lastMessage: LastMessage?
+}
+
+/// Where the participant stands with being matched to strangers.
+struct MatchStatus: Decodable, Equatable, Sendable {
+    enum State: String, Decodable, Sendable { case none, waiting, blocked }
+    let state: State
+    var termsAccepted: Bool?
+    var since: Date?
 }
 
 protocol TogetherService: Sendable {
@@ -541,8 +587,12 @@ protocol TogetherService: Sendable {
     func createGroup(name: String, anonymous: Bool) async throws -> [WalkingGroup]
     func joinGroup(code: String, anonymous: Bool) async throws -> [WalkingGroup]
     func leaveGroup(_ id: String) async throws
-    func groupPosts(_ id: String, day: Int) async throws -> [SharedPost]
+    /// The group's conversation — all of it, or only what came after `since`.
+    func groupPosts(_ id: String, since: Date?) async throws -> [SharedPost]
     func post(toGroup id: String, day: Int, text: String) async throws -> ShareOutcome
+    func matchStatus() async throws -> MatchStatus
+    func requestMatch(adult: Bool, agreed: Bool, firstName: String?) async throws -> (MatchStatus, [WalkingGroup], groupID: String?)
+    func cancelMatch() async throws -> MatchStatus
 }
 
 struct RemoteTogetherService: TogetherService {
@@ -590,14 +640,38 @@ struct RemoteTogetherService: TogetherService {
         let _: OK = try await client.send("DELETE", "api/mobile/together/groups/\(id)", body: Optional<[String: String]>.none)
     }
 
-    func groupPosts(_ id: String, day: Int) async throws -> [SharedPost] {
-        let response: Posts = try await client.get("api/mobile/together/groups/\(id)/posts?day=\(day)")
+    func groupPosts(_ id: String, since: Date?) async throws -> [SharedPost] {
+        var path = "api/mobile/together/groups/\(id)/posts"
+        if let since {
+            let stamp = since.ISO8601Format(Date.ISO8601FormatStyle(includingFractionalSeconds: true))
+            path += "?since=\(stamp.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? stamp)"
+        }
+        let response: Posts = try await client.get(path)
         return response.posts
     }
 
     func post(toGroup id: String, day: Int, text: String) async throws -> ShareOutcome {
         struct Body: Encodable { let dayNumber: Int; let text: String }
         return try await client.send("POST", "api/mobile/together/groups/\(id)/posts", body: Body(dayNumber: day, text: text))
+    }
+
+    private struct Status: Decodable { let status: MatchStatus }
+
+    func matchStatus() async throws -> MatchStatus {
+        let response: Status = try await client.get("api/mobile/together/match")
+        return response.status
+    }
+
+    func requestMatch(adult: Bool, agreed: Bool, firstName: String?) async throws -> (MatchStatus, [WalkingGroup], groupID: String?) {
+        struct Body: Encodable { let adult: Bool; let agreed: Bool; let firstName: String? }
+        struct Response: Decodable { let status: MatchStatus; let groups: [WalkingGroup]; let groupId: String? }
+        let response: Response = try await client.send("POST", "api/mobile/together/match", body: Body(adult: adult, agreed: agreed, firstName: firstName))
+        return (response.status, response.groups, response.groupId)
+    }
+
+    func cancelMatch() async throws -> MatchStatus {
+        let response: Status = try await client.send("DELETE", "api/mobile/together/match", body: Optional<[String: String]>.none)
+        return response.status
     }
 }
 
@@ -616,15 +690,20 @@ struct PreviewTogetherService: TogetherService {
     func report(postID: String) async throws {}
     func groups() async throws -> [WalkingGroup] { [] }
     func createGroup(name: String, anonymous: Bool) async throws -> [WalkingGroup] {
-        [WalkingGroup(id: "g1", name: name, inviteCode: "ABCD2345", inviteURL: URL(string: "https://www.30daysonthemount.com/join/ABCD2345")!,
-                      members: [.init(name: "You", isMe: true)])]
+        [WalkingGroup(id: "g1", name: name, kind: .friends, inviteCode: "ABCD2345", inviteURL: URL(string: "https://www.30daysonthemount.com/join/ABCD2345")!,
+                      members: [.init(name: "You", isMe: true, currentDay: 1)], unread: 0, lastMessage: nil)]
     }
     func joinGroup(code: String, anonymous: Bool) async throws -> [WalkingGroup] { [] }
     func leaveGroup(_ id: String) async throws {}
-    func groupPosts(_ id: String, day: Int) async throws -> [SharedPost] { [] }
+    func groupPosts(_ id: String, since: Date?) async throws -> [SharedPost] { [] }
     func post(toGroup id: String, day: Int, text: String) async throws -> ShareOutcome {
         try await share(day: day, text: text, anonymous: false)
     }
+    func matchStatus() async throws -> MatchStatus { MatchStatus(state: .none, termsAccepted: false) }
+    func requestMatch(adult: Bool, agreed: Bool, firstName: String?) async throws -> (MatchStatus, [WalkingGroup], groupID: String?) {
+        (MatchStatus(state: .waiting, since: .now), [], nil)
+    }
+    func cancelMatch() async throws -> MatchStatus { MatchStatus(state: .none, termsAccepted: true) }
 }
 
 // MARK: - Media

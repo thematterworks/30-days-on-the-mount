@@ -94,3 +94,16 @@ jobs:
             "$BASE_URL/api/cron/midday")
           echo "HTTP $code"; cat /tmp/midday.json; echo
           test "$code" = "200"
+
+      # Forms matched walking groups, nudges quiet ones. App notifications
+      # only; see app/api/cron/walking-groups.
+      - name: Walking groups
+        if: always()
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          code=$(curl -sS -w '%{http_code}' -o /tmp/groups.json \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$BASE_URL/api/cron/walking-groups")
+          echo "HTTP $code"; cat /tmp/groups.json; echo
+          test "$code" = "200"

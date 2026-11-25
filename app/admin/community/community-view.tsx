@@ -74,13 +74,19 @@ function ModerationQueue() {
           <Card key={post.id}>
             <CardContent className="space-y-3 p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{post.phone_number}</span>
+                <span className="text-sm font-medium">
+                  {post.display_name ?? "Anonymous"}{" "}
+                  <span className="font-normal text-muted-foreground">{post.phone_number ?? "Companion"}</span>
+                </span>
                 <div className="flex items-center gap-2">
+                  {post.group_id ? <Badge variant="outline">Group</Badge> : null}
+                  {post.report_count > 0 ? <Badge variant="destructive">{post.report_count} reports</Badge> : null}
                   {post.day_number !== null ? <Badge variant="outline">Day {post.day_number}</Badge> : null}
                   <Badge>{post.status}</Badge>
                 </div>
               </div>
               <p className="text-sm">{post.content}</p>
+              {post.moderation_note ? <p className="text-xs text-muted-foreground">Screen: {post.moderation_note}</p> : null}
               <div className="flex gap-2">
                 <Button size="sm" variant="secondary" onClick={() => moderate(post.id, "approved")}>
                   Approve

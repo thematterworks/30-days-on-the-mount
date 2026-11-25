@@ -36,6 +36,8 @@ final class AppModel {
     let together: any TogetherService
     /// A walking-companions invitation opened from a link, waiting to be accepted.
     var pendingInvite: String?
+    /// A walking group to open, from a notification.
+    var pendingGroup: String?
     /// The server can read aloud; listen buttons appear only when it can.
     private(set) var voiceAvailable = false
     private(set) var voiceChatAvailable = false
@@ -296,6 +298,10 @@ final class AppModel {
         case .join(let code):
             storyRoute = nil
             pendingInvite = code
+            isProfilePresented = true
+        case .group(let id):
+            storyRoute = nil
+            pendingGroup = id
             isProfilePresented = true
         case .deeper(let number):
             guard journey.canOpen(number) else { return }

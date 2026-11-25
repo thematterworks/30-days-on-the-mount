@@ -49,6 +49,10 @@ export type UserRow = {
   midday_sent_on: string | null;
   /** Whether they want the midday notification (Profile → Notifications). */
   midday_invitations: boolean;
+  /** When they confirmed they're 18+ and agreed to the walking-group guidelines. */
+  walking_terms_accepted_at: string | null;
+  /** Set when repeated harmful posts ended their place in matched groups. */
+  matching_blocked_at: string | null;
 };
 
 export type MagicLinkRow = {
@@ -100,7 +104,8 @@ export type SystemConfigRow = {
 
 export type CommunityPostRow = {
   id: string;
-  phone_number: string;
+  /** Null for the companion's own messages in a group. */
+  phone_number: string | null;
   day_number: number | null;
   content: string;
   status: CommunityPostStatus;
@@ -119,6 +124,15 @@ export type WalkingGroupRow = {
   invite_code: string;
   created_by: string | null;
   created_at: string;
+  kind: "friends" | "matched";
+  last_activity_at: string;
+  last_nudged_at: string | null;
+};
+
+export type WalkingMatchRequestRow = {
+  phone_number: string;
+  display_name: string | null;
+  requested_at: string;
 };
 
 export type WalkingGroupMemberRow = {
@@ -126,6 +140,8 @@ export type WalkingGroupMemberRow = {
   phone_number: string;
   display_name: string | null;
   joined_at: string;
+  last_read_at: string;
+  last_notified_at: string | null;
 };
 
 export type CommunityReportRow = {
@@ -225,7 +241,7 @@ export type Database = {
       };
       community_posts: {
         Row: CommunityPostRow;
-        Insert: Partial<CommunityPostRow> & { phone_number: string; content: string };
+        Insert: Partial<CommunityPostRow> & { phone_number: string | null; content: string };
         Update: Partial<CommunityPostRow>;
         Relationships: [];
       };
@@ -239,6 +255,12 @@ export type Database = {
         Row: WalkingGroupMemberRow;
         Insert: Partial<WalkingGroupMemberRow> & { group_id: string; phone_number: string };
         Update: Partial<WalkingGroupMemberRow>;
+        Relationships: [];
+      };
+      walking_match_requests: {
+        Row: WalkingMatchRequestRow;
+        Insert: Partial<WalkingMatchRequestRow> & { phone_number: string };
+        Update: Partial<WalkingMatchRequestRow>;
         Relationships: [];
       };
       community_reports: {
