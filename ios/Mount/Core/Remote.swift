@@ -299,6 +299,7 @@ protocol AccountService: Sendable {
     func participant() async throws -> RemoteParticipant?
     func updateMorningHour(_ hour: Int, timezone: String) async throws
     func updateMiddayInvitations(_ on: Bool) async throws
+    func updateFirstName(_ name: String) async throws
     func registerDevice(apnsToken: String) async throws
     func unregisterDevice(apnsToken: String) async throws
     func deleteAccount() async throws
@@ -319,6 +320,10 @@ struct RemoteAccountService: AccountService {
         let _: ParticipantResponse = try await client.send(
             "PATCH", "api/mobile/me", body: Body(preferredHour: hour, timezone: timezone)
         )
+    }
+
+    func updateFirstName(_ name: String) async throws {
+        let _: ParticipantResponse = try await client.send("PATCH", "api/mobile/me", body: ["firstName": name])
     }
 
     func updateMiddayInvitations(_ on: Bool) async throws {
@@ -355,6 +360,7 @@ struct PreviewAccountService: AccountService {
     func participant() async throws -> RemoteParticipant? { nil }
     func updateMorningHour(_ hour: Int, timezone: String) async throws {}
     func updateMiddayInvitations(_ on: Bool) async throws {}
+    func updateFirstName(_ name: String) async throws {}
     func registerDevice(apnsToken: String) async throws {}
     func unregisterDevice(apnsToken: String) async throws {}
     func deleteAccount() async throws {}
@@ -490,6 +496,134 @@ struct PreviewStudyService: StudyService {
             kingdom: "The kingdom opens first to people who have stopped pretending — *is*, not will be.",
             question: "Where are you still coming to God with full hands?"
         )
+    }
+}
+
+// MARK: - Together
+
+/// A reflection or group post someone shared (lib/community.ts).
+struct SharedPost: Decodable, Identifiable, Hashable, Sendable {
+    let id: String
+    let dayNumber: Int?
+    let displayName: String?
+    let text: String
+    let createdAt: Date
+    let mine: Bool
+}
+
+/// What happened to something shared: up now, waiting to be read, or held —
+/// with support offered when the screen saw distress.
+struct ShareOutcome: Decodable, Sendable {
+    enum Kind: String, Decodable, Sendable { case shared, pending, held }
+    let outcome: Kind
+    let support: Bool
+    let post: SharedPost?
+}
+
+struct WalkingGroup: Decodable, Identifiable, Hashable, Sendable {
+    struct Member: Decodable, Hashable, Sendable {
+        let name: String
+        let isMe: Bool
+    }
+    let id: String
+    let name: String
+    let inviteCode: String
+    let inviteURL: URL
+    let members: [Member]
+}
+
+protocol TogetherService: Sendable {
+    func dayPosts(_ day: Int) async throws -> [SharedPost]
+    func share(day: Int, text: String, anonymous: Bool) async throws -> ShareOutcome
+    func delete(postID: String) async throws
+    func report(postID: String) async throws
+    func groups() async throws -> [WalkingGroup]
+    func createGroup(name: String, anonymous: Bool) async throws -> [WalkingGroup]
+    func joinGroup(code: String, anonymous: Bool) async throws -> [WalkingGroup]
+    func leaveGroup(_ id: String) async throws
+    func groupPosts(_ id: String, day: Int) async throws -> [SharedPost]
+    func post(toGroup id: String, day: Int, text: String) async throws -> ShareOutcome
+}
+
+struct RemoteTogetherService: TogetherService {
+    let client: APIClient
+
+    private struct Posts: Decodable { let posts: [SharedPost] }
+    private struct Groups: Decodable { let groups: [WalkingGroup] }
+
+    func dayPosts(_ day: Int) async throws -> [SharedPost] {
+        let response: Posts = try await client.get("api/mobile/together/day/\(day)")
+        return response.posts
+    }
+
+    func share(day: Int, text: String, anonymous: Bool) async throws -> ShareOutcome {
+        struct Body: Encodable { let text: String; let anonymous: Bool }
+        return try await client.send("POST", "api/mobile/together/day/\(day)", body: Body(text: text, anonymous: anonymous))
+    }
+
+    func delete(postID: String) async throws {
+        let _: OK = try await client.send("DELETE", "api/mobile/together/posts/\(postID)", body: Optional<[String: String]>.none)
+    }
+
+    func report(postID: String) async throws {
+        let _: OK = try await client.send("POST", "api/mobile/together/posts/\(postID)/report", body: Optional<[String: String]>.none)
+    }
+
+    func groups() async throws -> [WalkingGroup] {
+        let response: Groups = try await client.get("api/mobile/together/groups")
+        return response.groups
+    }
+
+    func createGroup(name: String, anonymous: Bool) async throws -> [WalkingGroup] {
+        struct Body: Encodable { let name: String; let anonymous: Bool }
+        let response: Groups = try await client.send("POST", "api/mobile/together/groups", body: Body(name: name, anonymous: anonymous))
+        return response.groups
+    }
+
+    func joinGroup(code: String, anonymous: Bool) async throws -> [WalkingGroup] {
+        struct Body: Encodable { let code: String; let anonymous: Bool }
+        let response: Groups = try await client.send("POST", "api/mobile/together/groups/join", body: Body(code: code, anonymous: anonymous))
+        return response.groups
+    }
+
+    func leaveGroup(_ id: String) async throws {
+        let _: OK = try await client.send("DELETE", "api/mobile/together/groups/\(id)", body: Optional<[String: String]>.none)
+    }
+
+    func groupPosts(_ id: String, day: Int) async throws -> [SharedPost] {
+        let response: Posts = try await client.get("api/mobile/together/groups/\(id)/posts?day=\(day)")
+        return response.posts
+    }
+
+    func post(toGroup id: String, day: Int, text: String) async throws -> ShareOutcome {
+        struct Body: Encodable { let dayNumber: Int; let text: String }
+        return try await client.send("POST", "api/mobile/together/groups/\(id)/posts", body: Body(dayNumber: day, text: text))
+    }
+}
+
+/// Keeps everything on the device, for previews and walkthroughs.
+struct PreviewTogetherService: TogetherService {
+    static let sample = [
+        SharedPost(id: "1", dayNumber: 1, displayName: "Grace", text: "I caught myself explaining why I was late, three times. Letting it go felt like setting down a backpack.", createdAt: .now.addingTimeInterval(-3600), mine: false),
+        SharedPost(id: "2", dayNumber: 1, displayName: nil, text: "Harder than I expected. I didn't realise how much of my day is spent defending myself.", createdAt: .now.addingTimeInterval(-7200), mine: false),
+    ]
+    func dayPosts(_ day: Int) async throws -> [SharedPost] { Self.sample }
+    func share(day: Int, text: String, anonymous: Bool) async throws -> ShareOutcome {
+        ShareOutcome(outcome: .shared, support: false,
+                     post: SharedPost(id: UUID().uuidString, dayNumber: day, displayName: anonymous ? nil : "You", text: text, createdAt: .now, mine: true))
+    }
+    func delete(postID: String) async throws {}
+    func report(postID: String) async throws {}
+    func groups() async throws -> [WalkingGroup] { [] }
+    func createGroup(name: String, anonymous: Bool) async throws -> [WalkingGroup] {
+        [WalkingGroup(id: "g1", name: name, inviteCode: "ABCD2345", inviteURL: URL(string: "https://www.30daysonthemount.com/join/ABCD2345")!,
+                      members: [.init(name: "You", isMe: true)])]
+    }
+    func joinGroup(code: String, anonymous: Bool) async throws -> [WalkingGroup] { [] }
+    func leaveGroup(_ id: String) async throws {}
+    func groupPosts(_ id: String, day: Int) async throws -> [SharedPost] { [] }
+    func post(toGroup id: String, day: Int, text: String) async throws -> ShareOutcome {
+        try await share(day: day, text: text, anonymous: false)
     }
 }
 

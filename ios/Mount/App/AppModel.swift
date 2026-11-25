@@ -33,6 +33,9 @@ final class AppModel {
     @ObservationIgnored private(set) lazy var dictation = Dictation(audio: audio)
     let voice: VoiceConversation
     let study: any StudyService
+    let together: any TogetherService
+    /// A walking-companions invitation opened from a link, waiting to be accepted.
+    var pendingInvite: String?
     /// The server can read aloud; listen buttons appear only when it can.
     private(set) var voiceAvailable = false
     private(set) var voiceChatAvailable = false
@@ -80,6 +83,7 @@ final class AppModel {
             avatar = AvatarStore(service: PreviewAvatarService())
             voice = VoiceConversation(service: PreviewVoiceService(), audio: audio)
             study = PreviewStudyService()
+            together = PreviewTogetherService()
         } else {
             // A 401 means the session can't be trusted any more; sign-in is
             // the only useful place to be.
@@ -94,6 +98,7 @@ final class AppModel {
             avatar = AvatarStore(service: RemoteAvatarService(client: client))
             voice = VoiceConversation(service: RemoteVoiceService(client: client), audio: audio)
             study = RemoteStudyService(client: client)
+            together = RemoteTogetherService(client: client)
             // Sessions issued by earlier preview builds were never known to
             // the server.
             if session.session?.isPreview == true { session.signOut() }
@@ -180,6 +185,20 @@ final class AppModel {
         if ProcessInfo.processInfo.arguments.contains("-silent") { return }
         #endif
         if focus.playAmbient, !audio.isAmbientOn { audio.isAmbientOn = true }
+    }
+
+    /// The participant's first name, kept on the server (users.first_name).
+    func updateFirstName(_ name: String) {
+        let trimmed = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(40))
+        let previous = firstName
+        firstName = trimmed.isEmpty ? nil : trimmed
+        Task {
+            do {
+                try await account.updateFirstName(trimmed)
+            } catch {
+                firstName = previous
+            }
+        }
     }
 
     func setMiddayInvitations(_ on: Bool) {
@@ -274,6 +293,10 @@ final class AppModel {
             guard journey.canOpen(number) else { return }
             selectedTab = .journey
             storyRoute = StoryRoute(dayNumber: number)
+        case .join(let code):
+            storyRoute = nil
+            pendingInvite = code
+            isProfilePresented = true
         case .deeper(let number):
             guard journey.canOpen(number) else { return }
             selectedTab = .journey

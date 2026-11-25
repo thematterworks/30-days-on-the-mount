@@ -176,18 +176,19 @@ struct GuidedStoryView: View {
         case .teaching: TeachingScreen(day: day, isActive: isActive)
         case .exegesis: ExegesisScreen(day: day, isActive: isActive)
         case .reflection: ReflectionScreen(day: day, isActive: isActive)
+        case .together: WalkingWithOthersScreen(day: day, isActive: isActive)
         case .surrender: SurrenderScreen(day: day, isActive: isActive)
         }
     }
 }
 
 enum StoryScreen: Hashable {
-    case hook, scripture, teaching, exegesis, reflection, surrender
+    case hook, scripture, teaching, exegesis, reflection, together, surrender
 
     /// Screens with nothing to show are left out rather than rendered empty —
     /// today that is the teaching video, which only some days have.
     static func screens(for day: JourneyDay) -> [StoryScreen] {
-        [.hook, .scripture, .teaching, .exegesis, .reflection, .surrender]
+        [.hook, .scripture, .teaching, .exegesis, .reflection, .together, .surrender]
             .filter { $0 != .teaching || day.teachingVideoURL != nil }
     }
 }

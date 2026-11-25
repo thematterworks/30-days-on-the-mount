@@ -164,6 +164,10 @@ private struct WelcomeSceneView: View {
     let isActive: Bool
     let begin: () -> Void
 
+    @Environment(AppModel.self) private var model
+    @State private var name = ""
+    @FocusState private var isNaming: Bool
+
     var body: some View {
         VStack(spacing: 22) {
             Spacer(minLength: 80)
@@ -236,7 +240,28 @@ private struct WelcomeSceneView: View {
         case .breathe:
             Label("Swipe up", systemImage: "chevron.up").zoeLabelStyle()
         case .begin:
-            Button(action: begin) {
+            // Until now someone is only a phone number to the app. A first
+            // name — optional — is how the companion and their friends know them.
+            VStack(spacing: 8) {
+                Text("What should we call you?").zoeLabelStyle(Zoe.peach)
+                TextField("Your first name", text: $name)
+                    .focused($isNaming)
+                    .textContentType(.givenName)
+                    .textInputAutocapitalization(.words)
+                    .submitLabel(.done)
+                    .font(.zoeSerif(.title3))
+                    .multilineTextAlignment(.center)
+                    .padding(.vertical, 12)
+                    .overlay(alignment: .bottom) { Rectangle().fill(Zoe.ink.opacity(0.25)).frame(height: 1) }
+                    .onAppear { if name.isEmpty { name = model.firstName ?? "" } }
+            }
+            .padding(.bottom, 14)
+            Button {
+                isNaming = false
+                let chosen = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !chosen.isEmpty, chosen != model.firstName { model.updateFirstName(chosen) }
+                begin()
+            } label: {
                 Text("Begin")
                     .font(.zoeSerif(.title3))
                     .frame(maxWidth: .infinity, minHeight: 54)

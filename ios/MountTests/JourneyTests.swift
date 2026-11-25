@@ -77,7 +77,7 @@ struct CurriculumTests {
     @Test func omitsTheTeachingScreenWhenThereIsNoVideo() async throws {
         let day = try #require(try await BundledCurriculumSource().loadDays().first)
         #expect(day.teachingVideoURL == nil)
-        #expect(StoryScreen.screens(for: day) == [.hook, .scripture, .exegesis, .reflection, .surrender])
+        #expect(StoryScreen.screens(for: day) == [.hook, .scripture, .exegesis, .reflection, .together, .surrender])
     }
 }
 

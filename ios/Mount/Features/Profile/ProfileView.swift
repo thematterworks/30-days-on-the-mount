@@ -50,6 +50,9 @@ struct ProfileView: View {
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
 
+                TogetherSection()
+                    .listRowBackground(rowBackground)
+
                 Section("Rhythm") {
                     Picker("Morning invitation", selection: $settings.morningHour) {
                         ForEach(5..<12, id: \.self) { hour in Text(Self.hourLabel(hour)).tag(hour) }

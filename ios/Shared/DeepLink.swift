@@ -7,6 +7,8 @@ enum DeepLink: Equatable, Sendable {
     /// A day's story opened at its teaching — the midday notification.
     case deeper(Int)
     case companion
+    /// A walking-companions invitation: mount://join/CODE.
+    case join(String)
 
     static let scheme = "mount"
 
@@ -15,6 +17,7 @@ enum DeepLink: Equatable, Sendable {
         case .day(let number): URL(string: "\(Self.scheme)://day/\(number)")!
         case .deeper(let number): URL(string: "\(Self.scheme)://day/\(number)/deeper")!
         case .companion: URL(string: "\(Self.scheme)://companion")!
+        case .join(let code): URL(string: "\(Self.scheme)://join/\(code)")!
         }
     }
 
@@ -23,6 +26,10 @@ enum DeepLink: Equatable, Sendable {
         switch url.host() {
         case "companion":
             self = .companion
+        case "join":
+            let code = url.lastPathComponent.uppercased()
+            guard code.count >= 6, code.allSatisfy({ $0.isLetter || $0.isNumber }) else { return nil }
+            self = .join(code)
         case "day":
             // mount://day/4, or mount://day/4/deeper
             let parts = url.pathComponents.filter { $0 != "/" }
