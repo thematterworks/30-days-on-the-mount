@@ -460,16 +460,65 @@ struct ScriptureStudy: Decodable, Sendable {
         let note: String
     }
 
-    let summary: String
-    let context: String
-    let words: [Word]
-    let connections: [Connection]
-    let kingdom: String
-    let question: String
+    var summary: String
+    var context: String
+    var words: [Word]
+    var connections: [Connection]
+    var kingdom: String
+    var question: String
+
+    init(summary: String, context: String, words: [Word], connections: [Connection], kingdom: String, question: String) {
+        self.summary = summary
+        self.context = context
+        self.words = words
+        self.connections = connections
+        self.kingdom = kingdom
+        self.question = question
+    }
+
+    private enum CodingKeys: String, CodingKey { case summary, context, words, connections, kingdom, question }
+
+    /// Tolerant, because a study arrives as it's written: early versions
+    /// have only the first sections, and the last entry of a list may be
+    /// half-written (and is left out until it's whole).
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        summary = (try? container.decodeIfPresent(String.self, forKey: .summary)) ?? ""
+        context = (try? container.decodeIfPresent(String.self, forKey: .context)) ?? ""
+        words = ((try? container.decodeIfPresent([Lossy<Word>].self, forKey: .words)) ?? []).compactMap(\.value)
+        connections = ((try? container.decodeIfPresent([Lossy<Connection>].self, forKey: .connections)) ?? []).compactMap(\.value)
+        kingdom = (try? container.decodeIfPresent(String.self, forKey: .kingdom)) ?? ""
+        question = (try? container.decodeIfPresent(String.self, forKey: .question)) ?? ""
+    }
+}
+
+/// An element of a list that may not decode yet.
+private struct Lossy<Value: Decodable & Sendable>: Decodable, Sendable {
+    let value: Value?
+    init(from decoder: any Decoder) throws { value = try? Value(from: decoder) }
 }
 
 protocol StudyService: Sendable {
     func study(reference: String, text: String) async throws -> ScriptureStudy
+    /// The study as it's written: each element is the study so far, the
+    /// last one finished.
+    func studyStream(reference: String, text: String) -> AsyncThrowingStream<ScriptureStudy, any Error>
+}
+
+extension StudyService {
+    func studyStream(reference: String, text: String) -> AsyncThrowingStream<ScriptureStudy, any Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    continuation.yield(try await study(reference: reference, text: text))
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
 }
 
 struct RemoteStudyService: StudyService {
@@ -481,6 +530,37 @@ struct RemoteStudyService: StudyService {
             "POST", "api/mobile/study", body: ["reference": reference, "text": text]
         )
         return response.study
+    }
+
+    func studyStream(reference: String, text: String) -> AsyncThrowingStream<ScriptureStudy, any Error> {
+        struct Line: Decodable { let study: ScriptureStudy?; let done: Bool?; let error: String? }
+        let client = client
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    var request = URLRequest(url: client.baseURL.appending(path: "api/mobile/study"))
+                    request.httpMethod = "POST"
+                    request.timeoutInterval = 90
+                    request.setValue("application/x-ndjson", forHTTPHeaderField: "Accept")
+                    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                    if let token = client.token.current { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+                    request.httpBody = try JSONEncoder().encode(["reference": reference, "text": text])
+                    let (bytes, response) = try await URLSession.shared.bytes(for: request)
+                    let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                    if status == 401 { client.onUnauthorized(); throw APIError.unauthorized }
+                    guard (200..<300).contains(status) else { throw APIError.server("The study couldn't be opened just now.") }
+                    for try await line in bytes.lines {
+                        guard let data = line.data(using: .utf8), let decoded = try? JSONDecoder().decode(Line.self, from: data) else { continue }
+                        if let error = decoded.error { throw APIError.server(error) }
+                        if let study = decoded.study { continuation.yield(study) }
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
     }
 }
 

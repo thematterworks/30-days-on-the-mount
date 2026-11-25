@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { AiEngineError } from "@/lib/ai";
 import { badRequest, getMobileParticipant, readJson, unauthorized } from "@/lib/mobile";
-import { studyFor } from "@/lib/study";
+import { studyFor, studyStream } from "@/lib/study";
 
 export const maxDuration = 60;
 
@@ -17,6 +17,14 @@ export async function POST(request: NextRequest) {
   const text = typeof body.text === "string" ? body.text.trim() : "";
   if (!reference || !text) return badRequest("Choose a verse to study.");
   if (text.length > MAX_PASSAGE_LENGTH) return badRequest("That's a long passage — choose a few verses to study.");
+
+  // The app asks for the study as it's written, so it appears within a
+  // moment instead of all at once at the end.
+  if (request.headers.get("accept")?.includes("application/x-ndjson")) {
+    return new Response(studyStream(reference, text), {
+      headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store", "X-Accel-Buffering": "no" },
+    });
+  }
 
   try {
     const study = await studyFor(reference, text);

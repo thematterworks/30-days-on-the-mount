@@ -17,6 +17,8 @@ struct StudyView: View {
     @Environment(AppModel.self) private var model
     @State private var study: ScriptureStudy?
     @State private var problem: String?
+    /// Still being written: sections appear as they're ready.
+    @State private var isWriting = false
 
     var body: some View {
         ScrollView {
@@ -25,7 +27,7 @@ struct StudyView: View {
                     HStack {
                         Text("Study").zoeLabelStyle(Zoe.peach)
                         Spacer()
-                        if let study { ListenButton(text: spoken(study), id: "study-\(request.reference)", compact: true) }
+                        if let study, !isWriting { ListenButton(text: spoken(study), id: "study-\(request.reference)", compact: true) }
                     }
                     Text(request.reference).font(.zoeDisplay(38))
                     Text("\u{201C}\(request.text)\u{201D}")
@@ -35,8 +37,8 @@ struct StudyView: View {
                 }
 
                 if let study {
-                    section("The passage") { prose(study.summary) }
-                    section("Context") { prose(study.context) }
+                    if !study.summary.isEmpty { section("The passage") { prose(study.summary) } }
+                    if !study.context.isEmpty { section("Context") { prose(study.context) } }
                     if !study.words.isEmpty {
                         section("The words") {
                             VStack(alignment: .leading, spacing: 18) {
@@ -65,17 +67,27 @@ struct StudyView: View {
                             }
                         }
                     }
-                    section("The Kingdom") {
-                        prose(study.kingdom)
-                            .padding(16)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Zoe.peach.opacity(0.1), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    if !study.kingdom.isEmpty {
+                        section("The Kingdom") {
+                            prose(study.kingdom)
+                                .padding(16)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Zoe.peach.opacity(0.1), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        }
                     }
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("To carry with you").zoeLabelStyle()
-                        Text(study.question).font(.zoeSerif(.title3).italic()).lineSpacing(4)
+                    if !study.question.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("To carry with you").zoeLabelStyle()
+                            Text(study.question).font(.zoeSerif(.title3).italic()).lineSpacing(4)
+                        }
                     }
-                    .padding(.bottom, 24)
+                    if isWriting {
+                        HStack(spacing: 10) {
+                            ProgressView().controlSize(.small).tint(Zoe.peach)
+                            Text("Still writing…").font(.zoeSerif(.subheadline).italic()).foregroundStyle(Zoe.inkMuted)
+                        }
+                    }
+                    Color.clear.frame(height: 24)
                 } else if let problem {
                     VStack(spacing: 14) {
                         Text(problem).foregroundStyle(Zoe.inkMuted).multilineTextAlignment(.center)
@@ -106,10 +118,14 @@ struct StudyView: View {
 
     private func load() async {
         problem = nil
+        isWriting = true
+        defer { isWriting = false }
         do {
-            study = try await model.study.study(reference: request.reference, text: request.text)
+            for try await partial in model.study.studyStream(reference: request.reference, text: request.text) {
+                withAnimation(.easeOut(duration: 0.25)) { study = partial }
+            }
         } catch {
-            problem = "The study couldn't be opened just now."
+            if study == nil { problem = "The study couldn't be opened just now." }
         }
     }
 

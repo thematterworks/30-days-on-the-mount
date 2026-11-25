@@ -333,6 +333,45 @@ export async function generateScriptureStudy(reference: string, text: string): P
   return block.input as ScriptureStudy;
 }
 
+/**
+ * The same study, streamed: `onPartial` is called with the study as written
+ * so far (sections fill in as the model writes them), throttled to a few
+ * updates a second. Resolves with the finished study.
+ */
+export async function streamScriptureStudy(
+  reference: string,
+  text: string,
+  onPartial: (partial: Partial<ScriptureStudy>) => void,
+): Promise<ScriptureStudy | null> {
+  let lastSent = 0;
+  try {
+    const stream = getClient().messages.stream({
+      model: "claude-opus-5-5",
+      max_tokens: 2500,
+      system: STUDY_SYSTEM_PROMPT,
+      tools: [STUDY_TOOL],
+      messages: [
+        {
+          role: "user",
+          content: `${reference} (Berean Standard Bible)\n\n${text}\n\nPresent your study with the present_study tool.`,
+        },
+      ],
+    });
+    stream.on("inputJson", (_delta, snapshot) => {
+      const now = Date.now();
+      if (now - lastSent < 120 || !snapshot || typeof snapshot !== "object") return;
+      lastSent = now;
+      onPartial(snapshot as Partial<ScriptureStudy>);
+    });
+    const message = await timed("anthropic:study-stream", () => stream.finalMessage());
+    const block = message.content.find((item) => item.type === "tool_use");
+    if (!block || block.type !== "tool_use") return null;
+    return block.input as ScriptureStudy;
+  } catch (error) {
+    throw new AiEngineError(describeAnthropicError(error));
+  }
+}
+
 // MARK: - Community screening
 
 export type ModerationDecision = "approve" | "review" | "distress" | "reject";
