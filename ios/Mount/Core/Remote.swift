@@ -593,6 +593,8 @@ protocol TogetherService: Sendable {
     func matchStatus() async throws -> MatchStatus
     func requestMatch(adult: Bool, agreed: Bool, firstName: String?) async throws -> (MatchStatus, [WalkingGroup], groupID: String?)
     func cancelMatch() async throws -> MatchStatus
+    /// The participant's own Share-the-journey link (/i/CODE).
+    func personalInvite() async throws -> URL
 }
 
 struct RemoteTogetherService: TogetherService {
@@ -673,6 +675,12 @@ struct RemoteTogetherService: TogetherService {
         let response: Status = try await client.send("DELETE", "api/mobile/together/match", body: Optional<[String: String]>.none)
         return response.status
     }
+
+    func personalInvite() async throws -> URL {
+        struct Response: Decodable { let url: URL }
+        let response: Response = try await client.get("api/mobile/invite")
+        return response.url
+    }
 }
 
 /// Keeps everything on the device, for previews and walkthroughs.
@@ -704,6 +712,7 @@ struct PreviewTogetherService: TogetherService {
         (MatchStatus(state: .waiting, since: .now), [], nil)
     }
     func cancelMatch() async throws -> MatchStatus { MatchStatus(state: .none, termsAccepted: true) }
+    func personalInvite() async throws -> URL { URL(string: "https://www.30daysonthemount.com/i/preview")! }
 }
 
 // MARK: - Media

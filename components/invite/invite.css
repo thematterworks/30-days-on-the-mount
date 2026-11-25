@@ -1,0 +1,98 @@
+/* The invitation's stage: the brand gradient, slowly breathing light, and
+   scenes that arrive like the app's welcome tour. */
+.invite-root {
+  --invite-peach: #f6cdaf;
+  --invite-navy: #2c3254;
+  background: linear-gradient(135deg, #8a8396 0%, #737293 48%, #546391 100%);
+  font-family: var(--font-invite-sans), system-ui, sans-serif;
+}
+
+.invite-atmosphere {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(40% 35% at 70% 20%, rgb(246 205 175 / 0.28), transparent 70%),
+    radial-gradient(45% 40% at 20% 85%, rgb(44 50 84 / 0.55), transparent 70%);
+  animation: invite-breathe 14s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes invite-breathe {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-3%, 2%, 0) scale(1.06); }
+}
+
+.invite-display {
+  font-family: var(--font-invite-display), "Didot", serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.invite-serif {
+  font-family: var(--font-invite-serif), Georgia, serif;
+  text-wrap: pretty;
+}
+
+.invite-root main::-webkit-scrollbar { display: none; }
+
+/* Each scene's parts arrive in order as it comes into view. */
+.invite-arrive {
+  opacity: 0;
+  transform: translateY(14px);
+  filter: blur(6px);
+  transition:
+    opacity 0.9s ease,
+    transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1),
+    filter 0.9s ease;
+  transition-delay: calc(var(--order, 0) * 140ms);
+}
+
+.invite-scene[data-active="true"] .invite-arrive {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+.invite-cue span:last-child {
+  animation: invite-cue 2.4s ease-in-out infinite;
+  transform-origin: top;
+}
+
+@keyframes invite-cue {
+  0%, 100% { transform: scaleY(0.4); opacity: 0.4; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+.invite-primary,
+.invite-secondary {
+  display: inline-flex;
+  min-height: 52px;
+  width: 100%;
+  max-width: 22rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0 1.75rem;
+  font-family: var(--font-invite-serif), Georgia, serif;
+  font-size: 1.1rem;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.invite-primary {
+  background: var(--invite-peach);
+  color: var(--invite-navy);
+}
+
+.invite-secondary {
+  border: 1px solid rgb(246 205 175 / 0.6);
+  color: var(--invite-peach);
+}
+
+.invite-primary:active,
+.invite-secondary:active { transform: scale(0.98); }
+
+@media (prefers-reduced-motion: reduce) {
+  .invite-atmosphere, .invite-cue span:last-child { animation: none; }
+  .invite-arrive { transition: opacity 0.4s ease; transform: none; filter: none; }
+}

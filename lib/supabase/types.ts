@@ -53,6 +53,9 @@ export type UserRow = {
   walking_terms_accepted_at: string | null;
   /** Set when repeated harmful posts ended their place in matched groups. */
   matching_blocked_at: string | null;
+  /** Their personal Share-the-journey link: /i/CODE. */
+  invite_code: string | null;
+  invite_opens: number;
 };
 
 export type MagicLinkRow = {

@@ -6,6 +6,9 @@ import SwiftUI
 struct ShareJourneyCard: View {
     @Environment(AppModel.self) private var model
     @State private var card: Image?
+    /// Their own link, which opens a welcome-style invitation carrying
+    /// their name; the site itself until it arrives.
+    @State private var link = Self.link
 
     private static let link = URL(string: "https://www.30daysonthemount.com")!
 
@@ -30,7 +33,7 @@ struct ShareJourneyCard: View {
             .frame(maxWidth: .infinity)
 
             ShareLink(
-                item: Self.link,
+                item: link,
                 subject: Text("Walk the Sermon on the Mount with me"),
                 message: Text(message(day: day)),
                 preview: SharePreview("Walk the Sermon on the Mount with me", image: card ?? Image("MountainLine"))
@@ -49,7 +52,10 @@ struct ShareJourneyCard: View {
             in: RoundedRectangle(cornerRadius: 24, style: .continuous)
         )
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Zoe.peach.opacity(0.25)))
-        .task { card = InviteCard.render() }
+        .task {
+            card = InviteCard.render()
+            if let personal = try? await model.together.personalInvite() { link = personal }
+        }
     }
 
     private func message(day: Int) -> String {
