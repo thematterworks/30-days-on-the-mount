@@ -19,7 +19,11 @@ struct CompanionView: View {
             header(today: today)
 
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 26) {
+                // Not lazy: pinned to the bottom, a lazy stack keeps
+                // re-estimating the heights of long entries above and the
+                // page drifts up and down on its own. The history is capped
+                // at 200 entries, so laying it all out is cheap.
+                VStack(alignment: .leading, spacing: 26) {
                     if companion.messages.isEmpty {
                         Text("Whatever today's practice stirs up, you can bring it here.")
                             .font(.zoeSerif(.title3))
