@@ -16,7 +16,14 @@ struct VoiceContext: Equatable, Identifiable {
         case 1: word = "verse \(verses[0])"
         default: word = "verses \(verses.first!) to \(verses.last!)"
         }
+        // The companion's first words, written for this moment.
+        let opening = switch verses.count {
+        case 0: "We're in \(book) chapter \(chapter). What's catching your attention?"
+        case 1: "\(book) \(chapter), verse \(verses[0]). What's stirring in you as you read it?"
+        default: "\(book) \(chapter), verses \(verses.first!) to \(verses.last!). What's stirring in you as you read them?"
+        }
         var variables = [
+            "opening": opening,
             "bookName": book,
             "chapter": String(chapter),
             "activeWord": word,
@@ -38,6 +45,7 @@ struct VoiceContext: Equatable, Identifiable {
         return VoiceContext(
             title: "Day \(day.dayNumber) · \(day.title)",
             variables: [
+                "opening": "Day \(day.dayNumber), \(day.title). How is the practice sitting with you so far?",
                 "bookName": book.isEmpty ? "Matthew" : book,
                 "chapter": chapter.isEmpty ? "5" : chapter,
                 "activeWord": day.title,

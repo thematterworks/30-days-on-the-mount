@@ -15,6 +15,8 @@ export async function POST(request: NextRequest) {
   if (!participant) return unauthorized();
 
   const variables = {
+    // The agent opens with {{opening}}; older app builds don't send one.
+    opening: "What's on your heart today?",
     ...cleanVariables((await readJson(request)).variables),
     first_name: participant.first_name ?? "friend",
     current_day: String(participant.current_day ?? 1),

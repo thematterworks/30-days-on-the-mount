@@ -46,6 +46,8 @@ export async function conversationToken(): Promise<string> {
  * kept short.
  */
 const APP_VARIABLES = [
+  // The first message itself: the agent's first_message is "{{opening}}".
+  "opening",
   "activeWord",
   "bookName",
   "chapter",

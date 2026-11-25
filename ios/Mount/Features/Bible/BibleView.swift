@@ -15,6 +15,20 @@ struct BibleView: View {
 
     var body: some View {
         let bible = model.bible
+        // The header has a row of its own: attached to the scroll view, its
+        // buttons took several taps to answer.
+        VStack(spacing: 0) {
+            header
+            reader(bible)
+        }
+        .sheet(isPresented: $isPickingBook) { BookPicker() }
+        .sheet(item: $voiceContext) { context in
+            TalkView(context: context).presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $isSearching) { BibleSearch() }
+    }
+
+    private func reader(_ bible: BibleStore) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -45,7 +59,6 @@ struct BibleView: View {
             }
             .scrollIndicators(.hidden)
             .softScrollEdges()
-            .safeAreaInset(edge: .top, spacing: 0) { header }
             .overlay(alignment: .bottom) {
                 if !selection.isEmpty {
                     SelectionBar(
@@ -83,11 +96,6 @@ struct BibleView: View {
                 }
             }
         }
-        .sheet(isPresented: $isPickingBook) { BookPicker() }
-        .sheet(item: $voiceContext) { context in
-            TalkView(context: context).presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $isSearching) { BibleSearch() }
     }
 
     private static let chapterTop = "chapter-top"
@@ -109,11 +117,9 @@ struct BibleView: View {
 
             Spacer()
 
-            SoundToggle()
+            if model.voiceAvailable { listenButton }
 
-            if let book = model.bible.currentBook {
-                TalkButton(context: .bible(book: book.name, chapter: model.bible.location.chapter), compact: true)
-            }
+            SoundToggle()
 
             Button { isSearching = true } label: {
                 Image(systemName: "magnifyingglass")
@@ -130,6 +136,31 @@ struct BibleView: View {
         .padding(.vertical, 6)
     }
 
+    /// The chapter read aloud, from the header: play, and stop.
+    private var listenButton: some View {
+        let audio = model.audio
+        let id = "bible-\(model.bible.title)"
+        let isThis = audio.speakingID == id
+        return Button {
+            audio.toggleSpeaking(chapterText, id: id)
+        } label: {
+            Group {
+                if isThis && audio.isPreparingSpeech {
+                    ProgressView().controlSize(.small).tint(Zoe.ink)
+                } else {
+                    Image(systemName: isThis ? "stop.fill" : "play.fill")
+                        .font(.footnote)
+                        .contentTransition(.symbolEffect(.replace))
+                }
+            }
+            .foregroundStyle(isThis ? Zoe.peach : Zoe.ink)
+            .frame(width: 36, height: 36)
+            .zoeGlass(in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isThis ? "Stop reading" : "Listen to this chapter")
+    }
+
     private var chapterHeading: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(model.bible.currentBook?.name ?? "").zoeLabelStyle(Zoe.peach)
@@ -137,8 +168,6 @@ struct BibleView: View {
                 Text("\(model.bible.location.chapter)")
                     .font(.zoeDisplay(72))
                     .foregroundStyle(Zoe.ink)
-                Spacer()
-                ListenButton(text: chapterText, id: "bible-\(model.bible.title)", label: "Listen")
             }
         }
         .padding(.top, 24)
