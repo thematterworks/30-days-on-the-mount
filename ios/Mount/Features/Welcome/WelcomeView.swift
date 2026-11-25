@@ -484,19 +484,31 @@ private struct JournalGlimpse: View {
 }
 
 /// Where you are in the welcome, as a column of small marks.
-private struct SceneMarks: View {
+/// The quiet marks down the edge of a vertical story: where you are, and
+/// on a long card, how far through it — the current mark fills as you read.
+struct SceneMarks: View {
     let count: Int
     let index: Int
+    var progress: Double = 1
 
     var body: some View {
         VStack(spacing: 8) {
             ForEach(0..<count, id: \.self) { mark in
+                let isCurrent = mark == index
                 Capsule()
-                    .fill(mark == index ? Zoe.peach : Zoe.ink.opacity(0.25))
-                    .frame(width: 3, height: mark == index ? 18 : 6)
+                    .fill(isCurrent ? Zoe.peach.opacity(0.3) : mark < index ? Zoe.peach.opacity(0.55) : Zoe.ink.opacity(0.25))
+                    .overlay(alignment: .top) {
+                        if isCurrent {
+                            Capsule().fill(Zoe.peach)
+                                .frame(height: max(6, 28 * progress))
+                        }
+                    }
+                    .frame(width: 3, height: isCurrent ? 28 : 6)
+                    .clipShape(Capsule())
             }
         }
         .animation(.smooth, value: index)
+        .animation(.linear(duration: 0.1), value: progress)
         .accessibilityHidden(true)
     }
 }

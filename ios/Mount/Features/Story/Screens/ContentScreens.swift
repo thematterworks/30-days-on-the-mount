@@ -133,39 +133,33 @@ struct TeachingScreen: View {
     }
 }
 
+/// The teaching, whole: a card as long as its text, read by scrolling, the
+/// way an article is.
 struct ExegesisScreen: View {
     let day: JourneyDay
     let isActive: Bool
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                HStack {
-                    Text("Going deeper").zoeLabelStyle()
-                    Spacer()
-                    ListenButton(text: day.exegesisText, id: "day-\(day.dayNumber)-exegesis", compact: true)
-                }
-                .arrival(isActive, order: 0)
-                ForEach(Array(day.exegesisParagraphs.enumerated()), id: \.offset) { position, paragraph in
-                    Text(paragraph)
-                        .font(.system(size: 18 * model.settings.readingScale, design: .serif))
-                        .foregroundStyle(Zoe.ink.opacity(0.9))
-                        .lineSpacing(7)
-                        .arrival(isActive, order: position + 1)
-                }
+        VStack(alignment: .leading, spacing: 24) {
+            HStack {
+                Text("Going deeper").zoeLabelStyle()
+                Spacer()
+                ListenButton(text: day.exegesisText, id: "day-\(day.dayNumber)-exegesis", compact: true)
             }
-            .padding(.horizontal, 32)
-            .padding(.vertical, 40)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .arrival(isActive, order: 0)
+            ForEach(Array(day.exegesisParagraphs.enumerated()), id: \.offset) { position, paragraph in
+                Text(paragraph)
+                    .font(.system(size: 19 * model.settings.readingScale, design: .serif))
+                    .foregroundStyle(Zoe.ink.opacity(0.92))
+                    .lineSpacing(8)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .arrival(isActive, order: min(position + 1, 4))
+            }
         }
-        .scrollIndicators(.hidden)
-        // The reading dims at its edges instead of ending at a hard line.
-        .mask {
-            LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.06),
-                                   .init(color: .black, location: 0.9), .init(color: .clear, location: 1)],
-                           startPoint: .top, endPoint: .bottom)
-        }
+        .padding(.horizontal, 32)
+        .padding(.vertical, 24)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
