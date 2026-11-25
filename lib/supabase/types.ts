@@ -107,6 +107,31 @@ export type CommunityPostRow = {
   moderated_at: string | null;
   moderated_by: string | null;
   created_at: string;
+  display_name: string | null;
+  group_id: string | null;
+  moderation_note: string | null;
+  report_count: number;
+};
+
+export type WalkingGroupRow = {
+  id: string;
+  name: string;
+  invite_code: string;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type WalkingGroupMemberRow = {
+  group_id: string;
+  phone_number: string;
+  display_name: string | null;
+  joined_at: string;
+};
+
+export type CommunityReportRow = {
+  post_id: string;
+  phone_number: string;
+  created_at: string;
 };
 
 export type CommunityReflectionRow = {
@@ -202,6 +227,24 @@ export type Database = {
         Row: CommunityPostRow;
         Insert: Partial<CommunityPostRow> & { phone_number: string; content: string };
         Update: Partial<CommunityPostRow>;
+        Relationships: [];
+      };
+      walking_groups: {
+        Row: WalkingGroupRow;
+        Insert: Partial<WalkingGroupRow> & { name: string; invite_code: string };
+        Update: Partial<WalkingGroupRow>;
+        Relationships: [];
+      };
+      walking_group_members: {
+        Row: WalkingGroupMemberRow;
+        Insert: Partial<WalkingGroupMemberRow> & { group_id: string; phone_number: string };
+        Update: Partial<WalkingGroupMemberRow>;
+        Relationships: [];
+      };
+      community_reports: {
+        Row: CommunityReportRow;
+        Insert: Partial<CommunityReportRow> & { post_id: string; phone_number: string };
+        Update: Partial<CommunityReportRow>;
         Relationships: [];
       };
       community_reflections: {

@@ -79,11 +79,22 @@ export function CommunityDrawer({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reflection_text: value, anonymous }),
       });
-      const data = (await response.json().catch(() => null)) as { reflection?: Reflection; error?: string } | null;
-      if (!response.ok || !data?.reflection) {
+      const data = (await response.json().catch(() => null)) as
+        | { reflection?: Reflection | null; outcome?: "shared" | "pending" | "held"; support?: boolean; error?: string }
+        | null;
+      if (!response.ok || !data) {
         throw new Error(data?.error ?? "Couldn't share your reflection.");
       }
-      setReflections((prev) => [data.reflection as Reflection, ...prev]);
+      // Everything shared is screened first (lib/community.ts).
+      if (data.reflection) {
+        setReflections((prev) => [data.reflection as Reflection, ...prev]);
+      } else if (data.support) {
+        setError(
+          "Thank you for trusting us with this. If you're struggling, you don't have to carry it alone: call or text 988 to talk with someone right now.",
+        );
+      } else {
+        setError("Thank you. Your reflection will appear once it has been read.");
+      }
       setText("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't share your reflection.");

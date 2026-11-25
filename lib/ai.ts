@@ -333,3 +333,34 @@ export async function generateScriptureStudy(reference: string, text: string): P
   return block.input as ScriptureStudy;
 }
 
+// MARK: - Community screening
+
+export type ModerationDecision = "approve" | "review" | "distress" | "reject";
+
+const MODERATION_PROMPT = `You screen posts for a gentle Christian community inside 30 Days on the Mount, where people walking the Sermon on the Mount share short reflections and prayers with others on the same day, or with a small group of friends.
+
+Decide one of:
+- approve: a sincere personal reflection, prayer, question, struggle or encouragement, including honest doubt, grief, anger at God, or mild language. Most posts belong here.
+- review: unclear or borderline — names or details that could identify someone else, harsh judgment of others, heated theological attacks, links or promotion, or anything you're unsure about.
+- distress: any sign the writer may be in danger — thoughts of suicide or self-harm, abuse, or a crisis. Choose this even if the post is also otherwise fine.
+- reject: spam, hate, harassment, sexual content, or content meant to harm.
+
+Reply with JSON only: {"decision": "approve" | "review" | "distress" | "reject", "note": "<a few words why>"}`;
+
+/**
+ * Screens a community post before anyone else sees it. When the screen
+ * itself fails, the post waits for a person ("review") rather than going
+ * up unseen.
+ */
+export async function moderateCommunityPost(text: string): Promise<{ decision: ModerationDecision; note: string }> {
+  try {
+    const reply = await callClaude(MODERATION_PROMPT, text, 120);
+    const parsed = JSON.parse(reply?.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as { decision?: string; note?: string };
+    const decision = (["approve", "review", "distress", "reject"] as const).find((value) => value === parsed.decision);
+    return { decision: decision ?? "review", note: (parsed.note ?? "").slice(0, 200) };
+  } catch (error) {
+    console.error("Community screening failed", error);
+    return { decision: "review", note: "screening unavailable" };
+  }
+}
+
