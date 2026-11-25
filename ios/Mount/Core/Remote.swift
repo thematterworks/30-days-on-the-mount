@@ -126,12 +126,13 @@ struct RemoteParticipant: Decodable, Sendable {
     let currentDay: Int
     let timezone: String
     let preferredHour: Int?
+    var middayInvitations: Bool?
     let features: Features?
 
     struct Features: Decodable, Sendable {
         /// The server can read aloud (ELEVENLABS_API_KEY is set).
         let voice: Bool
-        /// Spoken conversations with Qara are available.
+        /// Spoken conversations with your companion are available.
         var voiceChat: Bool?
     }
 }
@@ -297,6 +298,7 @@ struct RemoteJourneyService: JourneyService {
 protocol AccountService: Sendable {
     func participant() async throws -> RemoteParticipant?
     func updateMorningHour(_ hour: Int, timezone: String) async throws
+    func updateMiddayInvitations(_ on: Bool) async throws
     func registerDevice(apnsToken: String) async throws
     func unregisterDevice(apnsToken: String) async throws
     func deleteAccount() async throws
@@ -317,6 +319,10 @@ struct RemoteAccountService: AccountService {
         let _: ParticipantResponse = try await client.send(
             "PATCH", "api/mobile/me", body: Body(preferredHour: hour, timezone: timezone)
         )
+    }
+
+    func updateMiddayInvitations(_ on: Bool) async throws {
+        let _: ParticipantResponse = try await client.send("PATCH", "api/mobile/me", body: ["middayInvitations": on])
     }
 
     func registerDevice(apnsToken: String) async throws {
@@ -348,6 +354,7 @@ struct RemoteAccountService: AccountService {
 struct PreviewAccountService: AccountService {
     func participant() async throws -> RemoteParticipant? { nil }
     func updateMorningHour(_ hour: Int, timezone: String) async throws {}
+    func updateMiddayInvitations(_ on: Bool) async throws {}
     func registerDevice(apnsToken: String) async throws {}
     func unregisterDevice(apnsToken: String) async throws {}
     func deleteAccount() async throws {}
@@ -395,7 +402,7 @@ struct PreviewAvatarService: AvatarService {
 
 // MARK: - Voice conversations
 
-/// Spoken conversations with Qara (app/api/mobile/voice). The server hands
+/// Spoken conversations with your companion (app/api/mobile/voice). The server hands
 /// out a short-lived token and fills in who the participant is; the call
 /// runs between the phone and ElevenLabs.
 protocol VoiceService: Sendable {
@@ -425,7 +432,7 @@ struct RemoteVoiceService: VoiceService {
 
 struct PreviewVoiceService: VoiceService {
     func session(variables: [String: String]) async throws -> (token: String, variables: [String: String]) {
-        throw APIError.server("Talking with Qara needs the live server.")
+        throw APIError.server("Talking with your companion needs the live server.")
     }
 
     func save(transcript: [(role: String, text: String)]) async throws {}

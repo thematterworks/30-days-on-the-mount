@@ -4,16 +4,16 @@ import Foundation
 import Observation
 import OSLog
 
-/// A spoken conversation with Qara, the ElevenLabs agent. One at a time: the
+/// A spoken conversation with your companion, the ElevenLabs agent. One at a time: the
 /// companion's Talk and the Bible's Ask both open one here, each telling
-/// Qara where the participant is through the agent's dynamic variables
+/// the companion where the participant is through the agent's dynamic variables
 /// ({{bookName}}, {{chapter}}, {{activeWord}} and the rest).
 ///
 /// The music rests while they talk, and what was said joins the companion
 /// history when the call ends, so speaking and writing are one conversation.
 @MainActor
 @Observable
-final class QaraVoice {
+final class VoiceConversation {
     enum Phase: Equatable {
         case idle, connecting, listening, thinking, speaking, ended
         case failed(String)
@@ -23,7 +23,7 @@ final class QaraVoice {
 
     struct Line: Identifiable, Equatable {
         let id: String
-        let fromQara: Bool
+        let fromCompanion: Bool
         let text: String
     }
 
@@ -59,8 +59,8 @@ final class QaraVoice {
             self.conversation = conversation
             observe(conversation)
         } catch {
-            Logger.app.error("Qara couldn't start: \(error.localizedDescription, privacy: .public)")
-            phase = .failed("Qara can't talk right now. Check your connection and try again.")
+            Logger.app.error("Voice conversation couldn't start: \(error.localizedDescription, privacy: .public)")
+            phase = .failed("Your companion can't talk right now. Check your connection and try again.")
             audio.resumeAfterRecording()
         }
     }
@@ -77,7 +77,7 @@ final class QaraVoice {
         phase = .ended
         audio.resumeAfterRecording()
 
-        let transcript = lines.map { (role: $0.fromQara ? "agent" : "user", text: $0.text) }
+        let transcript = lines.map { (role: $0.fromCompanion ? "agent" : "user", text: $0.text) }
         guard !transcript.isEmpty else { return }
         do {
             try await service.save(transcript: transcript)
@@ -91,7 +91,7 @@ final class QaraVoice {
         try? await conversation.setMuted(!isMuted)
     }
 
-    /// Tells Qara the participant has moved on — another chapter, another
+    /// Tells the companion the participant has moved on — another chapter, another
     /// word — without restarting the conversation.
     func update(context: String) async {
         guard let conversation, phase.isLive else { return }
@@ -100,6 +100,15 @@ final class QaraVoice {
 
     func reset() {
         if conversation == nil { phase = .idle }
+    }
+
+    /// What was said, without the delivery cues the voice reads but no one
+    /// should see — "[warmly]", "[pause]".
+    nonisolated static func spokenText(_ text: String) -> String {
+        text.replacing(/\[[^\]]*\]/, with: "")
+            .replacing(/[ \t]{2,}/, with: " ")
+            .replacing(/\ ([,.!?;:])/) { String($0.output.1) }
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var isFailed: Bool {
@@ -119,9 +128,10 @@ final class QaraVoice {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] messages in
                 MainActor.assumeIsolated {
-                    self?.lines = messages
-                        .filter { !$0.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-                        .map { Line(id: $0.id, fromQara: $0.role == .agent, text: $0.content) }
+                    self?.lines = messages.compactMap { message in
+                        let text = Self.spokenText(message.content)
+                        return text.isEmpty ? nil : Line(id: message.id, fromCompanion: message.role == .agent, text: text)
+                    }
                 }
             }
             .store(in: &subscriptions)
@@ -142,10 +152,10 @@ final class QaraVoice {
             case .speaking: .speaking
             }
         case .ended:
-            // Qara or the network ended it; keep what was said.
+            // the companion or the network ended it; keep what was said.
             if conversation != nil { Task { await end() } }
         case .error(let error):
-            Logger.app.error("Qara conversation error: \(error.localizedDescription, privacy: .public)")
+            Logger.app.error("Voice conversation conversation error: \(error.localizedDescription, privacy: .public)")
             phase = .failed("The conversation dropped. You can start again.")
             conversation = nil
             subscriptions.removeAll()

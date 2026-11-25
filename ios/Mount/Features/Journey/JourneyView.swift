@@ -9,9 +9,22 @@ struct JourneyView: View {
 
     @Environment(AppModel.self) private var model
     @State private var focusedDay: Int?
+    @State private var isPickingDay = false
 
     var body: some View {
         let journey = model.journey
+        // The header has a row of its own: attached to the paging scroll
+        // view, its buttons took several taps to answer.
+        VStack(spacing: 0) {
+            HubHeader { isPickingDay = true }
+            pages(journey)
+        }
+        .sheet(isPresented: $isPickingDay) {
+            DayPicker { day in withAnimation(.smooth(duration: 0.6)) { focusedDay = day } }
+        }
+    }
+
+    private func pages(_ journey: JourneyStore) -> some View {
         ScrollView(.vertical) {
             // Not lazy: opening on a late day, a lazy stack has to guess the
             // heights above it and comes to rest between two pages.
@@ -41,8 +54,13 @@ struct JourneyView: View {
         .scrollPosition(id: $focusedDay, anchor: .top)
         .scrollIndicators(.hidden)
         .sensoryFeedback(.selection, trigger: focusedDay)
-        .safeAreaInset(edge: .top, spacing: 0) { HubHeader() }
         .overlay(alignment: .bottom) { returnToToday }
+        .overlay {
+            DayScrubber(
+                days: journey.days.filter { journey.canOpen($0.dayNumber) },
+                current: focusedDay == Self.summitID ? nil : focusedDay
+            ) { day in focusedDay = day }
+        }
         // Once the pages are laid out, open on today.
         .task(id: journey.days.count) {
             await Task.yield()

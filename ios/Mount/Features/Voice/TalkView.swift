@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Where the participant is, for Qara: the agent's dynamic variables, a line
+/// Where the participant is, for the companion: the agent's dynamic variables, a line
 /// for the screen, and how to describe it again if they move on mid-call.
 struct VoiceContext: Equatable, Identifiable {
     var title: String
@@ -52,10 +52,10 @@ struct VoiceContext: Equatable, Identifiable {
     }
 }
 
-/// Talking with Qara out loud. A light at the centre breathes while Qara
+/// Talking with your companion out loud. A light at the centre breathes while the companion
 /// listens and brightens as it speaks; the words of the conversation run
 /// quietly beneath, and the call ends with one tap.
-struct TalkWithQaraView: View {
+struct TalkView: View {
     let context: VoiceContext
 
     @Environment(AppModel.self) private var model
@@ -68,7 +68,7 @@ struct TalkWithQaraView: View {
         VStack(spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Qara").font(.zoeDisplay(34))
+                    Text("Companion").font(.zoeDisplay(34))
                     Text(context.title).zoeLabelStyle()
                 }
                 Spacer()
@@ -114,7 +114,7 @@ struct TalkWithQaraView: View {
         .interactiveDismissDisabled(voice.phase.isLive)
     }
 
-    private func presence(_ phase: QaraVoice.Phase) -> some View {
+    private func presence(_ phase: VoiceConversation.Phase) -> some View {
         let speaking = phase == .speaking
         let thinking = phase == .thinking
         return ZStack {
@@ -135,26 +135,26 @@ struct TalkWithQaraView: View {
         .animation(.easeInOut(duration: 0.6), value: phase)
     }
 
-    private func status(_ phase: QaraVoice.Phase) -> String {
+    private func status(_ phase: VoiceConversation.Phase) -> String {
         switch phase {
-        case .idle, .connecting: "Qara is coming…"
+        case .idle, .connecting: "Connecting…"
         case .listening: model.voice.isMuted ? "Your microphone is off" : "Listening"
         case .thinking: "Thinking…"
-        case .speaking: "Qara is speaking"
+        case .speaking: "Speaking"
         case .ended: "The conversation is saved with your companion."
         case .failed(let message): message
         }
     }
 
-    private func transcript(_ lines: [QaraVoice.Line]) -> some View {
+    private func transcript(_ lines: [VoiceConversation.Line]) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 ForEach(lines) { line in
                     Text(line.text)
-                        .font(line.fromQara ? .zoeSerif(.callout) : .callout)
-                        .foregroundStyle(line.fromQara ? Zoe.ink.opacity(0.9) : Zoe.inkMuted)
-                        .frame(maxWidth: .infinity, alignment: line.fromQara ? .leading : .trailing)
-                        .multilineTextAlignment(line.fromQara ? .leading : .trailing)
+                        .font(line.fromCompanion ? .zoeSerif(.callout) : .callout)
+                        .foregroundStyle(line.fromCompanion ? Zoe.ink.opacity(0.9) : Zoe.inkMuted)
+                        .frame(maxWidth: .infinity, alignment: line.fromCompanion ? .leading : .trailing)
+                        .multilineTextAlignment(line.fromCompanion ? .leading : .trailing)
                         .id(line.id)
                 }
             }
@@ -168,7 +168,7 @@ struct TalkWithQaraView: View {
         }
     }
 
-    private func controls(_ voice: QaraVoice) -> some View {
+    private func controls(_ voice: VoiceConversation) -> some View {
         HStack(spacing: 36) {
             if voice.phase.isLive {
                 Button {
@@ -231,9 +231,9 @@ struct TalkButton: View {
                 }
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Talk with Qara")
+            .accessibilityLabel("Talk with your companion")
             .sheet(isPresented: $isTalking) {
-                TalkWithQaraView(context: context)
+                TalkView(context: context)
                     .presentationDragIndicator(.visible)
             }
         }

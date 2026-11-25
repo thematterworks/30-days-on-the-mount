@@ -62,7 +62,7 @@ struct LibraryView: View {
         }
         .scrollIndicators(.hidden)
         .softScrollEdges()
-        .safeAreaInset(edge: .top, spacing: 0) { HubHeader() }
+        .safeAreaInset(edge: .top, spacing: 0) { HubHeader(onTapTitle: nil) }
     }
 
     private var voices: some View {

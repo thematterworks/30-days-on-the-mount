@@ -232,3 +232,12 @@ struct DayTitleTests {
         #expect(JourneyDay.bareTitle(raw) == expected)
     }
 }
+
+@Suite("Voice transcript")
+struct VoiceTranscriptTests {
+    @Test func deliveryCuesAreRemoved() {
+        #expect(VoiceConversation.spokenText("[warmly] That is such a deep question.") == "That is such a deep question.")
+        #expect(VoiceConversation.spokenText("You know [pause] it's beautiful.") == "You know it's beautiful.")
+        #expect(VoiceConversation.spokenText("[softly]") == "")
+    }
+}

@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import MediaPlayer
 import Observation
 import OSLog
 
@@ -54,7 +55,7 @@ final class AudioDirector {
     private var fadeTask: Task<Void, Never>?
     private var trackIndex = 0
     private var observers: [NSObjectProtocol] = []
-    private var isForeground = true
+    private var hasRemoteCommands = false
     /// Later parts of a long passage still on their way.
     private var isFetchingParts = false
 
@@ -94,16 +95,14 @@ final class AudioDirector {
         startAmbient()
     }
 
+    /// The phone locking, or the app going to the background, doesn't end
+    /// the music or a passage being read: both carry on, like any audio app,
+    /// and pause from the Lock Screen. Coming back only resumes the music if
+    /// something else had silenced it.
     func enterForeground() {
-        isForeground = true
         startAmbient()
     }
 
-    func enterBackground() {
-        isForeground = false
-        stopAmbient(fade: false)
-        stopSpeaking()
-    }
 
     private func configureSession() {
         do {
@@ -119,7 +118,7 @@ final class AudioDirector {
     // MARK: Ambient
 
     private func startAmbient(requested: Bool = false) {
-        guard isAmbientOn, isForeground, !tracks.isEmpty else { return }
+        guard isAmbientOn, !tracks.isEmpty else { return }
         // Someone else's music is playing: let it be, unless the participant
         // just asked for ours.
         guard requested || !AVAudioSession.sharedInstance().secondaryAudioShouldBeSilencedHint else { return }
@@ -149,10 +148,11 @@ final class AudioDirector {
         } else {
             let player = AVPlayer(playerItem: item)
             player.volume = 0
-            player.audiovisualBackgroundPlaybackPolicy = .pauses
+            player.audiovisualBackgroundPlaybackPolicy = .continuesIfPossible
             ambientPlayer = player
         }
         nowPlaying = track
+        publishNowPlaying(track)
         observers.forEach(NotificationCenter.default.removeObserver)
         observers = [NotificationCenter.default.addObserver(
             forName: AVPlayerItem.didPlayToEndTimeNotification, object: item, queue: .main
@@ -165,7 +165,7 @@ final class AudioDirector {
     private func advance() {
         trackIndex = (trackIndex + 1) % max(tracks.count, 1)
         load(trackIndex)
-        if isAmbientOn, isForeground { ambientPlayer?.play() }
+        if isAmbientOn { ambientPlayer?.play() }
     }
 
     private var targetVolume: Float {
@@ -187,6 +187,32 @@ final class AudioDirector {
         }
     }
 
+
+    // MARK: Lock Screen
+
+    /// The music on the Lock Screen and in Control Center, with play and
+    /// pause that turn the ambient sound on and off.
+    private func publishNowPlaying(_ track: Track) {
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = [
+            MPMediaItemPropertyTitle: track.title,
+            MPMediaItemPropertyArtist: track.artist.isEmpty ? "30 Days on the Mount" : track.artist,
+        ]
+        guard !hasRemoteCommands else { return }
+        hasRemoteCommands = true
+        let commands = MPRemoteCommandCenter.shared()
+        commands.playCommand.addTarget { [weak self] _ in
+            MainActor.assumeIsolated { self?.isAmbientOn = true }
+            return .success
+        }
+        commands.pauseCommand.addTarget { [weak self] _ in
+            MainActor.assumeIsolated { self?.isAmbientOn = false }
+            return .success
+        }
+        commands.togglePlayPauseCommand.addTarget { [weak self] _ in
+            MainActor.assumeIsolated { self?.isAmbientOn.toggle() }
+            return .success
+        }
+    }
 
     // MARK: Recording
 
@@ -222,7 +248,7 @@ final class AudioDirector {
     /// moves the volume while this holds, so ducking can't revive music the
     /// participant has turned off.
     private var isPlayingAmbient: Bool {
-        isAmbientOn && isForeground && ambientPlayer?.timeControlStatus != .paused
+        isAmbientOn && ambientPlayer?.timeControlStatus != .paused
     }
 
     // MARK: Voice

@@ -85,7 +85,7 @@ struct BibleView: View {
         }
         .sheet(isPresented: $isPickingBook) { BookPicker() }
         .sheet(item: $voiceContext) { context in
-            TalkWithQaraView(context: context).presentationDragIndicator(.visible)
+            TalkView(context: context).presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isSearching) { BibleSearch() }
     }
@@ -194,7 +194,7 @@ struct BibleView: View {
         selection = []
     }
 
-    /// Ask is a conversation with Qara about the chosen verses, out loud,
+    /// Ask is a conversation with your companion about the chosen verses, out loud,
     /// when the server can make the call; otherwise it's written.
     private func askAboutSelection() {
         guard model.voiceChatAvailable, let book = model.bible.currentBook else { return writeAboutSelection() }

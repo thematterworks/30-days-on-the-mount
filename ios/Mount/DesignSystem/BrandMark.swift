@@ -43,9 +43,25 @@ struct AvatarButton: View {
 /// The header every tab shares: brand mark centered, avatar at the trailing
 /// edge, floating over full-bleed content.
 struct HubHeader: View {
+    /// When set, the brand mark opens the list of days.
+    var onTapTitle: (() -> Void)?
+
     var body: some View {
         ZStack {
-            BrandMark(compact: true)
+            if let onTapTitle {
+                Button(action: onTapTitle) {
+                    VStack(spacing: 2) {
+                        BrandMark(compact: true)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(Zoe.inkMuted)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Choose a day")
+            } else {
+                BrandMark(compact: true)
+            }
             HStack {
                 SoundToggle()
                 Spacer()

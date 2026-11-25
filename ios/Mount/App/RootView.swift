@@ -41,8 +41,6 @@ struct RootView: View {
                 model.audio.enterForeground()
                 model.applyFocus()
                 Task { await model.refresh() }
-            case .background:
-                model.audio.enterBackground()
             default:
                 break
             }
@@ -51,7 +49,7 @@ struct RootView: View {
             if let day = model.journey.day(route.dayNumber) {
                 // The day's title grows into its story, and the story shrinks
                 // back into the day when closed.
-                GuidedStoryView(day: day)
+                GuidedStoryView(day: day, startsAtTeaching: route.startsAtTeaching)
                     .navigationTransition(.zoom(sourceID: route.dayNumber, in: zoom))
             }
         }

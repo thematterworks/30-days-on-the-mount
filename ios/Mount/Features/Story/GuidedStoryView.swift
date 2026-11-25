@@ -11,6 +11,8 @@ import SwiftUI
 /// breaths before the reading, which can be stepped past at any moment.
 struct GuidedStoryView: View {
     let day: JourneyDay
+    /// Opened from the midday notification: straight to "Going deeper".
+    var startsAtTeaching = false
 
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -43,7 +45,9 @@ struct GuidedStoryView: View {
         StoryLayout(heights: (0..<count).map { heights[$0] ?? viewport }, viewport: viewport)
     }
 
-    private var index: Int { layout(StoryScreen.screens(for: day).count).card(at: offset) }
+    /// The card filling most of the screen — judged from a little above the
+    /// middle, so a card begins arriving as it snaps in, not after.
+    private var index: Int { layout(StoryScreen.screens(for: day).count).card(at: offset + viewport * 0.4) }
 
     /// `-previewStoryCard N` opens at a card, for walkthroughs.
     private static var startingCard: Int {
@@ -60,6 +64,7 @@ struct GuidedStoryView: View {
     /// Returning to a finished day, or an earlier one, goes straight in.
     private var showsThreshold: Bool {
         model.settings.thresholdBreaths
+            && !startsAtTeaching
             && day.dayNumber == model.journey.progress.currentDay
             && !model.journey.hasFinished(day.dayNumber)
     }
@@ -75,13 +80,43 @@ struct GuidedStoryView: View {
     }
 
     private func story(_ screens: [StoryScreen]) -> some View {
+        // The buttons sit in their own row above the cards, not on the
+        // scroll view: attached to it (as an overlay or a safe-area bar),
+        // their taps went to the scroll view instead.
+        VStack(spacing: 0) {
+            topBar
+            cards(screens)
+        }
+    }
+
+    private var topBar: some View {
+        HStack(spacing: 12) {
+            SoundToggle()
+            Spacer()
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Zoe.ink)
+                    .frame(width: 34, height: 34)
+                    .zoeGlass(in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Close")
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
+    }
+
+    private func cards(_ screens: [StoryScreen]) -> some View {
         let layout = layout(screens.count)
         return ScrollView(.vertical) {
             VStack(spacing: 0) {
                 ForEach(Array(screens.enumerated()), id: \.element) { position, screen in
                     content(for: screen, isActive: index == position)
-                        // Clear of the buttons above and the home indicator.
-                        .padding(.top, 72)
+                        // Clear of the home indicator.
+                        .padding(.top, 16)
                         .padding(.bottom, 40)
                         .frame(maxWidth: .infinity)
                         // At least a screen tall; a long card is as tall as
@@ -110,36 +145,20 @@ struct GuidedStoryView: View {
                 LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom).frame(height: 56)
                 Color.black
             }
-            // Clear behind the status bar and the buttons, fading in below.
-            .padding(.top, 48)
+            // Text fades as it scrolls up beneath the buttons.
+            .padding(.top, 0)
         }
-        .sensoryFeedback(.impact(weight: .light, intensity: 0.6), trigger: index)
+        .environment(\.briskArrivals, true)
+        .sensoryFeedback(.impact(flexibility: .rigid, intensity: 0.75), trigger: index)
         .task {
+            var start = startsAtTeaching ? screens.firstIndex(of: .exegesis) ?? 0 : 0
             #if DEBUG
-            if Self.startingCard > 0 {
-                try? await Task.sleep(for: .milliseconds(300))
-                scroll.scrollTo(id: Self.startingCard, anchor: .top)
-            }
+            if Self.startingCard > 0 { start = Self.startingCard }
             #endif
-        }
-        .overlay(alignment: .top) {
-            HStack(spacing: 12) {
-                SoundToggle()
-                Spacer()
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Zoe.ink)
-                        .frame(width: 34, height: 34)
-                        .zoeGlass(in: Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Close")
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
+            guard start > 0 else { return }
+            // Once the cards have been measured.
+            try? await Task.sleep(for: .milliseconds(250))
+            scroll.scrollTo(id: start, anchor: .top)
         }
         .overlay(alignment: .trailing) {
             SceneMarks(count: screens.count, index: index, progress: layout.progress(of: index, at: offset))

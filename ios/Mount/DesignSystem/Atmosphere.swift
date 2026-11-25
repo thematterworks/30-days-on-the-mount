@@ -60,16 +60,26 @@ struct Arrival: ViewModifier {
     let order: Int
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.briskArrivals) private var brisk
 
     func body(content: Content) -> some View {
         content
             .opacity(isActive ? 1 : 0)
-            .offset(y: isActive || reduceMotion ? 0 : 14)
-            .animation(
-                reduceMotion ? .easeOut(duration: 0.2) : .easeOut(duration: 0.7).delay(isActive ? 0.12 * Double(order) : 0),
-                value: isActive
-            )
+            .offset(y: isActive || reduceMotion ? 0 : (brisk ? 8 : 14))
+            .animation(animation, value: isActive)
     }
+
+    private var animation: Animation {
+        if reduceMotion { return .easeOut(duration: 0.2) }
+        let (duration, step) = brisk ? (0.35, 0.05) : (0.7, 0.12)
+        return .easeOut(duration: duration).delay(isActive ? step * Double(order) : 0)
+    }
+}
+
+extension EnvironmentValues {
+    /// Quicker arrivals, for screens swiped through card by card — the
+    /// day's story — where waiting on each line would drag.
+    @Entry var briskArrivals = false
 }
 
 extension View {

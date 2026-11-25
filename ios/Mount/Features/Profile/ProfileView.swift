@@ -51,6 +51,10 @@ struct ProfileView: View {
                     .onChange(of: settings.morningHour) { old, new in
                         if old != new { model.morningHourChanged(to: new) }
                     }
+                    Toggle("Midday: going deeper", isOn: Binding(
+                        get: { model.middayInvitations },
+                        set: { model.setMiddayInvitations($0) }
+                    ))
                     Toggle("Evening check-in", isOn: $settings.eveningCheckIn)
                     Toggle("Live Activity for the day", isOn: $settings.liveActivities)
                 }

@@ -10,7 +10,7 @@ options:
   generateEmptyDirectories: true
 
 packages:
-  # Spoken conversations with Qara (Features/Voice). Pinned to a release
+  # Spoken conversations with your companion (Features/Voice). Pinned to a release
   # that has been out a while; v4 changed the API.
   ElevenLabs:
     url: https://github.com/elevenlabs/elevenlabs-swift-sdk
@@ -47,9 +47,9 @@ targets:
         UIUserInterfaceStyle: Dark
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSSupportsLiveActivities: true
-        NSMicrophoneUsageDescription: Speak a reflection, a message to your companion, or talk with Qara out loud.
+        NSMicrophoneUsageDescription: Speak a reflection, a message to your companion, or talk with your companion out loud.
         NSSpeechRecognitionUsageDescription: Your spoken words are turned into text on this iPhone, so you can speak a reflection instead of typing it.
-        UIBackgroundModes: [remote-notification]
+        UIBackgroundModes: [remote-notification, audio]
         ITSAppUsesNonExemptEncryption: false
         CFBundleURLTypes:
           - CFBundleURLName: com.thematterworks.mount

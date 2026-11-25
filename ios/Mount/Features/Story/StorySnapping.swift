@@ -53,8 +53,8 @@ struct StoryLayout: Equatable {
             return start > range.lowerBound + 1 ? range.lowerBound : top(of: index - 1, comingFrom: .below)
         }
 
-        // A short card: a deliberate swipe moves one card, a nudge springs back.
-        let threshold = viewport * 0.15
+        // A short card: any real swipe moves one card; only a nudge springs back.
+        let threshold = viewport * 0.08
         if proposed > start + threshold { return top(of: index + 1, comingFrom: .above) }
         if proposed < start - threshold { return top(of: index - 1, comingFrom: .below) }
         return range.lowerBound

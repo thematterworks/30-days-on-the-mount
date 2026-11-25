@@ -4,6 +4,8 @@ import Foundation
 /// notifications so every surface opens the same destinations.
 enum DeepLink: Equatable, Sendable {
     case day(Int)
+    /// A day's story opened at its teaching — the midday notification.
+    case deeper(Int)
     case companion
 
     static let scheme = "mount"
@@ -11,6 +13,7 @@ enum DeepLink: Equatable, Sendable {
     var url: URL {
         switch self {
         case .day(let number): URL(string: "\(Self.scheme)://day/\(number)")!
+        case .deeper(let number): URL(string: "\(Self.scheme)://day/\(number)/deeper")!
         case .companion: URL(string: "\(Self.scheme)://companion")!
         }
     }
@@ -21,8 +24,10 @@ enum DeepLink: Equatable, Sendable {
         case "companion":
             self = .companion
         case "day":
-            guard let number = Int(url.lastPathComponent), number >= 1 else { return nil }
-            self = .day(number)
+            // mount://day/4, or mount://day/4/deeper
+            let parts = url.pathComponents.filter { $0 != "/" }
+            guard let first = parts.first, let number = Int(first), number >= 1 else { return nil }
+            self = parts.dropFirst().first == "deeper" ? .deeper(number) : .day(number)
         default:
             return nil
         }

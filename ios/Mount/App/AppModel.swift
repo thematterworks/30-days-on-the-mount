@@ -16,6 +16,8 @@ final class AppModel {
 
     struct StoryRoute: Identifiable, Hashable {
         let dayNumber: Int
+        /// Opens at "Going deeper" rather than the beginning.
+        var startsAtTeaching = false
         var id: Int { dayNumber }
     }
 
@@ -29,11 +31,13 @@ final class AppModel {
     let audio: AudioDirector
     let avatar: AvatarStore
     @ObservationIgnored private(set) lazy var dictation = Dictation(audio: audio)
-    let voice: QaraVoice
+    let voice: VoiceConversation
     /// The server can read aloud; listen buttons appear only when it can.
     private(set) var voiceAvailable = false
     private(set) var voiceChatAvailable = false
     private(set) var firstName: String?
+    /// The midday notification, kept on the server (users.midday_invitations).
+    private(set) var middayInvitations = true
 
     var selectedTab: HubTab = .journey
     var storyRoute: StoryRoute?
@@ -73,7 +77,7 @@ final class AppModel {
             account = PreviewAccountService()
             audio = AudioDirector(media: PreviewMediaService())
             avatar = AvatarStore(service: PreviewAvatarService())
-            voice = QaraVoice(service: PreviewVoiceService(), audio: audio)
+            voice = VoiceConversation(service: PreviewVoiceService(), audio: audio)
         } else {
             // A 401 means the session can't be trusted any more; sign-in is
             // the only useful place to be.
@@ -86,7 +90,7 @@ final class AppModel {
             account = RemoteAccountService(client: client)
             audio = AudioDirector(media: RemoteMediaService(client: client))
             avatar = AvatarStore(service: RemoteAvatarService(client: client))
-            voice = QaraVoice(service: RemoteVoiceService(client: client), audio: audio)
+            voice = VoiceConversation(service: RemoteVoiceService(client: client), audio: audio)
             // Sessions issued by earlier preview builds were never known to
             // the server.
             if session.session?.isPreview == true { session.signOut() }
@@ -146,6 +150,7 @@ final class AppModel {
             voiceAvailable = participant.features?.voice ?? false
             voiceChatAvailable = participant.features?.voiceChat ?? false
             firstName = participant.firstName
+            middayInvitations = participant.middayInvitations ?? true
             if let hour = participant.preferredHour, (5..<12).contains(hour) {
                 settings.morningHour = hour
             }
@@ -172,6 +177,17 @@ final class AppModel {
         if ProcessInfo.processInfo.arguments.contains("-silent") { return }
         #endif
         if focus.playAmbient, !audio.isAmbientOn { audio.isAmbientOn = true }
+    }
+
+    func setMiddayInvitations(_ on: Bool) {
+        middayInvitations = on
+        Task {
+            do {
+                try await account.updateMiddayInvitations(on)
+            } catch {
+                middayInvitations = !on
+            }
+        }
     }
 
     /// The morning hour is where the server sends the day, so a change
@@ -255,6 +271,10 @@ final class AppModel {
             guard journey.canOpen(number) else { return }
             selectedTab = .journey
             storyRoute = StoryRoute(dayNumber: number)
+        case .deeper(let number):
+            guard journey.canOpen(number) else { return }
+            selectedTab = .journey
+            storyRoute = StoryRoute(dayNumber: number, startsAtTeaching: true)
         case .companion:
             // The story is a full-screen cover; it closes so the companion
             // tab is what the participant lands on.
