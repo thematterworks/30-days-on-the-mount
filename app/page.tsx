@@ -56,7 +56,7 @@ export default async function LandingPage() {
             Matthew 5–7 · Thirty mornings
           </p>
           <h1 className="site-display site-rise mt-6 text-[3.2rem] leading-[1.02] sm:text-7xl" style={{ animationDelay: "1.1s" }}>
-            Come up the mountain
+            Journey on the Mountain
           </h1>
           <p className="site-serif site-rise mx-auto mt-7 max-w-xl text-xl leading-relaxed text-white/85 sm:text-[1.4rem]" style={{ animationDelay: "1.35s" }}>
             Thirty days in the words of Jesus, for the curious, the doubting, the devoted, and everyone in between.

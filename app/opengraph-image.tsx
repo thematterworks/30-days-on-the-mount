@@ -5,5 +5,5 @@ export const size = ogSize;
 export const contentType = "image/png";
 
 export default async function Image() {
-  return inviteCard("Come up the mountain", "Thirty days in the words of Jesus");
+  return inviteCard("Journey on the Mountain", "Thirty days in the words of Jesus");
 }
