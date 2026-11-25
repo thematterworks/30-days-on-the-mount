@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Hold along the right edge of the journey and a fine line of the days
+/// Hold along the right edge of the journey and a dotted path of the days
 /// fades in; slide to move through them, a light tick at each day, and the
 /// page follows. Only the days that are open — the journey still can't be
 /// run ahead of.
@@ -91,22 +91,20 @@ struct DayScrubber: View {
         return top + length * CGFloat(index) / CGFloat(days.count - 1)
     }
 
-    /// A hairline with a fine tick for each day. The chosen day's tick
-    /// widens, and its neighbours swell a little with nearness — a ripple
-    /// that follows the finger.
+    /// A dotted path, one small circle a day — the welcome tour's path of
+    /// days. The chosen day's dot grows to full peach, and its neighbours
+    /// swell a little with nearness, a ripple that follows the finger.
     private func track(height: CGFloat, active: Int) -> some View {
         ZStack(alignment: .topTrailing) {
-            Rectangle()
-                .fill(Zoe.ink.opacity(0.14))
-                .frame(width: 1, height: bounds(height).length)
-                .offset(x: -8, y: bounds(height).top)
             ForEach(days.indices, id: \.self) { index in
                 let swell = max(0, 1 - Double(abs(index - active)) / 3)
-                Capsule()
-                    .fill(index == active ? Zoe.peach : Zoe.ink.opacity(0.25 + 0.3 * swell))
-                    .frame(width: 3 + 9 * swell, height: index == active ? 2 : 1)
-                    .offset(x: -8, y: position(of: index, in: height))
-                    .animation(.spring(duration: 0.25, bounce: 0.2), value: active)
+                let size = index == active ? 9 : 3.5 + 2.5 * swell
+                Circle()
+                    .fill(Zoe.peach.opacity(index == active ? 1 : 0.7 + 0.3 * swell))
+                    .frame(width: size, height: size)
+                    .frame(width: 12, height: 12)
+                    .offset(x: -4, y: position(of: index, in: height) - 6)
+                    .animation(.spring(duration: 0.25, bounce: 0.25), value: active)
             }
         }
         .frame(width: 26, height: height, alignment: .topTrailing)
