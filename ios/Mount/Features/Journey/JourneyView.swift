@@ -88,7 +88,8 @@ struct JourneyView: View {
             // whole mountain, even if a day can't be entered yet.
             DayScrubber(
                 days: journey.days,
-                current: focusedDay == Self.summitID ? nil : focusedDay
+                current: focusedDay == Self.summitID ? nil : focusedDay,
+                today: journey.progress.currentDay
             ) { day in go(to: day) }
         }
         // Once the pages are laid out, open on today.
