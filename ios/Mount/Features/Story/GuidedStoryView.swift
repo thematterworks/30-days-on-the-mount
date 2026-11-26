@@ -166,7 +166,7 @@ struct GuidedStoryView: View {
     private func turn(by direction: Int, count: Int) {
         let next = min(max(index + direction, 0), count - 1)
         guard next != index else { return }
-        withAnimation(.smooth(duration: 0.7)) { page = next }
+        withAnimation(.smooth(duration: 0.6)) { page = next }
     }
 
     @ViewBuilder
