@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getCurrentParticipant } from "@/lib/participant-auth";
 import { dayReflections, displayNameFor, sharePost } from "@/lib/community";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 const MAX_REFLECTION_LENGTH = 1000;
 const MAX_WALL_ITEMS = 100;
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/journey
   const { participant } = resolved;
 
   const body = (await request.json().catch(() => null)) as
-    | { reflection_text?: string; anonymous?: boolean }
+    | { reflection_text?: string; anonymous?: boolean; agreed?: boolean }
     | null;
   const text = body?.reflection_text?.trim();
   if (!text) {
@@ -60,8 +61,16 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/journey
     return NextResponse.json({ error: "Reflection is too long" }, { status: 400 });
   }
 
+  // Sharing from the web agrees to the Community Guidelines (shown by the button).
+  let sharer = participant;
+  if (body?.agreed === true && !participant.community_agreed_at) {
+    const agreedAt = new Date().toISOString();
+    await getSupabaseAdmin().from("users").update({ community_agreed_at: agreedAt }).eq("phone_number", participant.phone_number);
+    sharer = { ...participant, community_agreed_at: agreedAt };
+  }
+
   const outcome = await sharePost({
-    participant,
+    participant: sharer,
     dayNumber: resolved.dayNumber,
     text,
     displayName: displayNameFor(participant, body?.anonymous === true),

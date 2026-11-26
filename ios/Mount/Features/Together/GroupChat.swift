@@ -21,6 +21,10 @@ struct GroupChatView: View {
     @State private var picked: PhotosPickerItem?
     @State private var recorder: VoiceRecorder?
     @State private var openMember: MemberRequest?
+    @State private var blocking: SharedPost?
+    @State private var isAgreeing = false
+    /// What to do once they've agreed to the guidelines: the send they tried.
+    @State private var afterAgreeing: (() -> Void)?
     @FocusState private var isComposing: Bool
 
     /// Quick words of encouragement, put in the draft to send or change.
@@ -52,12 +56,33 @@ struct GroupChatView: View {
             }
         }
         .sheet(item: $openMember) { request in
-            MemberCardSheet(groupID: group.id, memberID: request.id)
+            MemberCardSheet(groupID: group.id, memberID: request.id) {
+                posts.removeAll { $0.authorID == request.id }
+            }
+        }
+        .sheet(isPresented: $isAgreeing) {
+            CommunityAgreementSheet {
+                afterAgreeing?()
+                afterAgreeing = nil
+            }
+        }
+        .confirmationDialog(
+            "Block \(blocking?.displayName ?? "this person")?",
+            isPresented: Binding(get: { blocking != nil }, set: { if !$0 { blocking = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Block", role: .destructive) {
+                guard let post = blocking else { return }
+                posts.removeAll { $0.authorID != nil && $0.authorID == post.authorID }
+                Task { try? await model.together.block(postID: post.id) }
+            }
+        } message: {
+            Text("You won't see each other's posts, and you'll never be matched into the same group. You can unblock in Profile.")
         }
         .onChange(of: picked) { _, item in
             guard let item else { return }
             picked = nil
-            Task { await sendPicked(item) }
+            withAgreement { Task { await sendPicked(item) } }
         }
         .task {
             if recorder == nil { recorder = VoiceRecorder(audio: model.audio) }
@@ -86,7 +111,7 @@ struct GroupChatView: View {
                             DayMarker(day: day)
                         }
                         let continues = previous.map { $0.displayName == post.displayName && $0.mine == post.mine && !$0.fromCompanion && $0.dayNumber == post.dayNumber } ?? false
-                        MessageBubble(post: post, showsName: !continues, onDelete: { delete(post) }, onReport: { report(post) }) {
+                        MessageBubble(post: post, showsName: !continues, onDelete: { delete(post) }, onReport: { report(post) }, onBlock: { blocking = post }) {
                             if let id = post.authorID { openMember = MemberRequest(id: id) }
                         }
                     }
@@ -166,7 +191,7 @@ struct GroupChatView: View {
                     .padding(.horizontal, 14)
                     .background(Zoe.ink.opacity(0.08), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     Button {
-                        if let media = recorder.finish() { send(media: media) }
+                        if let media = recorder.finish() { withAgreement { send(media: media) } }
                     } label: {
                         Image(systemName: "arrow.up.circle.fill").font(.system(size: 32)).foregroundStyle(Zoe.peach)
                     }
@@ -197,7 +222,7 @@ struct GroupChatView: View {
                         .disabled(sending != nil)
                         .accessibilityLabel("Record a voice message")
                     } else {
-                        Button(action: send) {
+                        Button { withAgreement(send) } label: {
                             Image(systemName: "arrow.up.circle.fill")
                                 .font(.system(size: 32))
                                 .foregroundStyle(sending != nil ? Zoe.locked : Zoe.peach)
@@ -243,6 +268,13 @@ struct GroupChatView: View {
             defer { sending = nil }
             do {
                 let outcome = try await model.together.post(toGroup: group.id, day: max(model.journey.progress.currentDay, 1), text: text, media: nil)
+                if outcome.needsAgreement == true {
+                    draft = text
+                    model.hasAgreedToCommunity = false
+                    afterAgreeing = send
+                    isAgreeing = true
+                    return
+                }
                 showsSupport = outcome.support
                 if let post = outcome.post {
                     if !posts.contains(where: { $0.id == post.id }) { posts.append(post) }
@@ -255,6 +287,19 @@ struct GroupChatView: View {
             } catch {
                 draft = text
                 note = "It couldn't be sent just now."
+            }
+        }
+    }
+
+    /// Runs a send once they've agreed to the guidelines — asking first,
+    /// the first time.
+    private func withAgreement(_ action: @escaping () -> Void) {
+        Task {
+            if await model.communityAgreed() {
+                action()
+            } else {
+                afterAgreeing = action
+                isAgreeing = true
             }
         }
     }
@@ -340,6 +385,7 @@ private struct MessageBubble: View {
     let showsName: Bool
     var onDelete: (() -> Void)?
     var onReport: (() -> Void)?
+    var onBlock: (() -> Void)?
     var onOpenAuthor: (() -> Void)?
 
     var body: some View {
@@ -387,8 +433,11 @@ private struct MessageBubble: View {
                         Button("Copy", systemImage: "doc.on.doc") { UIPasteboard.general.string = post.text }
                         if post.mine, let onDelete {
                             Button("Delete", systemImage: "trash", role: .destructive, action: onDelete)
-                        } else if !post.mine, let onReport {
-                            Button("Report", systemImage: "flag", role: .destructive, action: onReport)
+                        } else if !post.mine {
+                            if let onReport { Button("Report", systemImage: "flag", role: .destructive, action: onReport) }
+                            if let onBlock, post.authorID != nil {
+                                Button("Block \(post.displayName ?? "this person")", systemImage: "hand.raised", role: .destructive, action: onBlock)
+                            }
                         }
                     }
             }

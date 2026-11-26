@@ -38,6 +38,8 @@ final class AppModel {
     var pendingInvite: String?
     /// A walking group to open, from a notification.
     var pendingGroup: String?
+    /// Whether they've agreed to the Community Guidelines, once known.
+    var hasAgreedToCommunity: Bool?
     /// The server can read aloud; listen buttons appear only when it can.
     private(set) var voiceAvailable = false
     private(set) var voiceChatAvailable = false
@@ -270,6 +272,7 @@ final class AppModel {
     /// next person to sign in on it starts clean. The server keeps
     /// everything; signing back in restores it.
     func signOut(notifyServer: Bool = true) {
+        hasAgreedToCommunity = nil
         let deviceToken = SharedStore.defaults.string(forKey: Self.deviceTokenKey)
         if notifyServer, let deviceToken, session.session != nil {
             // Before the token is cleared, so the request is still signed.
@@ -294,6 +297,15 @@ final class AppModel {
         guard let session = session.session else { return "·" }
         if session.signInMethod != "phone" { return firstName.map { String($0.prefix(1)).uppercased() } ?? "·" }
         return String(session.phoneNumber.suffix(2))
+    }
+
+    /// Whether they may share in Community yet: they agree to the
+    /// guidelines once, before their first post (App Review 1.2).
+    func communityAgreed() async -> Bool {
+        if let hasAgreedToCommunity { return hasAgreedToCommunity }
+        let agreed = (try? await together.communityMe())?.agreed ?? false
+        hasAgreedToCommunity = agreed
+        return agreed
     }
 
     func open(_ link: DeepLink) {

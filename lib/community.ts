@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { type ModerationResult, moderateCommunityMedia, moderateCommunityPost } from "@/lib/ai";
 import { sendAppNotification } from "@/lib/apns";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { hiddenPhones } from "@/lib/blocks";
 import { GUIDELINES, isGuideline, postingBlockedReason, recordStrike } from "@/lib/standing";
 import type { CommunityPostStatus, PostMedia, UserRow } from "@/lib/supabase/types";
 import { transcribe } from "@/lib/transcribe";
@@ -57,6 +58,8 @@ export type ShareOutcome = {
   post?: SharedPost;
   /** Said to the writer when a post is held for a reason they should know. */
   notice?: string;
+  /** Nothing was posted: they haven't agreed to the Community Guidelines yet. */
+  needsAgreement?: boolean;
 };
 
 type PostFields = {
@@ -170,6 +173,9 @@ export async function sharePost(params: {
 }): Promise<ShareOutcome> {
   const blocked = postingBlockedReason(params.participant);
   if (blocked) return { outcome: "held", support: false, notice: blocked };
+  if (!params.participant.community_agreed_at) {
+    return { outcome: "held", support: false, needsAgreement: true, notice: "Please read and agree to the Community Guidelines before you share." };
+  }
 
   const supabase = getSupabaseAdmin();
   const strangers = Boolean(params.strangers);
@@ -306,6 +312,7 @@ export async function markRead(groupId: string, phone: string): Promise<void> {
 
 /** Approved reflections shared with everyone for one day, newest first. */
 export async function dayReflections(dayNumber: number, viewer: string, limit = 100): Promise<SharedPost[]> {
+  const hidden = await hiddenPhones(viewer);
   const { data } = await getSupabaseAdmin()
     .from("community_posts")
     .select(POST_FIELDS)
@@ -314,7 +321,7 @@ export async function dayReflections(dayNumber: number, viewer: string, limit = 
     .eq("status", "approved")
     .order("created_at", { ascending: false })
     .limit(limit);
-  return sharedPosts(data ?? [], viewer);
+  return sharedPosts((data ?? []).filter((row) => !row.phone_number || !hidden.has(row.phone_number)), viewer);
 }
 
 /**
@@ -330,8 +337,8 @@ export async function groupPosts(groupId: string, viewer: string, since?: string
     .order("created_at", { ascending: false })
     .limit(200);
   if (since) query = query.gt("created_at", since);
-  const { data } = await query;
-  return sharedPosts((data ?? []).reverse(), viewer);
+  const [{ data }, hidden] = await Promise.all([query, hiddenPhones(viewer)]);
+  return sharedPosts((data ?? []).filter((row) => !row.phone_number || !hidden.has(row.phone_number)).reverse(), viewer);
 }
 
 /** Removes the participant's own post. */

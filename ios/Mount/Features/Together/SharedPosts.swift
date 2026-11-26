@@ -6,6 +6,7 @@ struct SharedPostRow: View {
     let post: SharedPost
     var onDelete: (() -> Void)?
     var onReport: (() -> Void)?
+    var onBlock: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -20,8 +21,11 @@ struct SharedPostRow: View {
                 Menu {
                     if post.mine, let onDelete {
                         Button("Delete", systemImage: "trash", role: .destructive, action: onDelete)
-                    } else if let onReport {
-                        Button("Report", systemImage: "flag", action: onReport)
+                    } else {
+                        if let onReport { Button("Report", systemImage: "flag", action: onReport) }
+                        if let onBlock, post.authorID != nil {
+                            Button("Block \(post.displayName ?? "this person")", systemImage: "hand.raised", role: .destructive, action: onBlock)
+                        }
                     }
                 } label: {
                     Image(systemName: "ellipsis")
@@ -81,6 +85,7 @@ struct ShareReflectionSheet: View {
     @State private var isSharing = false
     @State private var result: ShareOutcome?
     @State private var problem: String?
+    @State private var isAgreeing = false
 
     var body: some View {
         NavigationStack {
@@ -140,6 +145,7 @@ struct ShareReflectionSheet: View {
             }
         }
         .onAppear { if text.isEmpty { text = original } }
+        .sheet(isPresented: $isAgreeing) { CommunityAgreementSheet { share() } }
         .keyboardDismissible()
         .presentationBackground { ZoeAtmosphere(glow: 0.3) }
     }
@@ -171,10 +177,19 @@ struct ShareReflectionSheet: View {
         if !anonymous, model.firstName == nil, !chosen.isEmpty { model.updateFirstName(chosen) }
         Task {
             defer { isSharing = false }
+            guard await model.communityAgreed() else {
+                isAgreeing = true
+                return
+            }
             // A just-entered name has to reach the server before the post does.
             try? await Task.sleep(for: .milliseconds(anonymous || chosen.isEmpty ? 0 : 400))
             do {
                 let outcome = try await model.together.share(day: dayNumber, text: trimmed, anonymous: anonymous)
+                if outcome.needsAgreement == true {
+                    model.hasAgreedToCommunity = false
+                    isAgreeing = true
+                    return
+                }
                 result = outcome
                 if let post = outcome.post { onShared(post) }
             } catch {
@@ -194,6 +209,7 @@ struct WalkingWithOthersScreen: View {
     @State private var posts: [SharedPost] = []
     @State private var hasLoaded = false
     @State private var isSharing = false
+    @State private var blocking: SharedPost?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -222,7 +238,7 @@ struct WalkingWithOthersScreen: View {
             } else {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(posts) { post in
-                        SharedPostRow(post: post, onDelete: { delete(post) }, onReport: { report(post) })
+                        SharedPostRow(post: post, onDelete: { delete(post) }, onReport: { report(post) }, onBlock: { blocking = post })
                         Rectangle().fill(Zoe.locked).frame(height: 0.5)
                     }
                 }
@@ -236,6 +252,19 @@ struct WalkingWithOthersScreen: View {
             guard isActive else { return }
             posts = (try? await model.together.dayPosts(day.dayNumber)) ?? posts
             hasLoaded = true
+        }
+        .confirmationDialog(
+            "Block \(blocking?.displayName ?? "this person")?",
+            isPresented: Binding(get: { blocking != nil }, set: { if !$0 { blocking = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Block", role: .destructive) {
+                guard let post = blocking else { return }
+                posts.removeAll { $0.authorID != nil && $0.authorID == post.authorID }
+                Task { try? await model.together.block(postID: post.id) }
+            }
+        } message: {
+            Text("You won't see each other's posts, and you'll never be matched into the same group. You can unblock in Profile.")
         }
         .sheet(isPresented: $isSharing) {
             ShareReflectionSheet(dayNumber: day.dayNumber, original: model.journey.reflections[day.dayNumber]?.text ?? "") { post in

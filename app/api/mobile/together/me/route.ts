@@ -12,7 +12,12 @@ const MAX_ABOUT = 140;
 export async function GET(request: NextRequest) {
   const participant = await getMobileParticipant(request);
   if (!participant) return unauthorized();
-  return NextResponse.json({ standing: standingOf(participant), about: participant.about ?? null, memberId: memberId(participant.phone_number) });
+  return NextResponse.json({
+    standing: standingOf(participant),
+    about: participant.about ?? null,
+    memberId: memberId(participant.phone_number),
+    agreed: Boolean(participant.community_agreed_at),
+  });
 }
 
 /** Sets "A word about me" — screened, like everything others will see. */

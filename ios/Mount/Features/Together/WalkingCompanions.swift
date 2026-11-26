@@ -15,6 +15,7 @@ final class CommunityState {
     var openGroup: WalkingGroup?
     var me: CommunityMe?
     var isEditingAbout = false
+    var isShowingBlocked = false
 
     func refresh(_ model: AppModel) async {
         async let loadedGroups = model.together.groups()
@@ -22,7 +23,10 @@ final class CommunityState {
         async let loadedMe = model.together.communityMe()
         if let loaded = try? await loadedGroups { groups = loaded }
         if let loaded = try? await loadedMatch { match = loaded }
-        if let loaded = try? await loadedMe { me = loaded }
+        if let loaded = try? await loadedMe {
+            me = loaded
+            model.hasAgreedToCommunity = loaded.agreed
+        }
     }
 
     /// Whether they can start, join or be matched into groups.
@@ -74,6 +78,13 @@ struct CommunitySection: View {
                     }
                 } icon: {
                     Image(systemName: "text.quote").foregroundStyle(Zoe.peach).frame(width: 30)
+                }
+            }
+            Button { state.isShowingBlocked = true } label: {
+                Label {
+                    Text("Blocked people").foregroundStyle(Zoe.ink)
+                } icon: {
+                    Image(systemName: "hand.raised.slash").foregroundStyle(Zoe.peach).frame(width: 30)
                 }
             }
             Link(destination: Self.guidelines) {
@@ -181,6 +192,7 @@ private struct CommunityPresentations: ViewModifier {
                     }
                 }
             }
+            .sheet(isPresented: $state.isShowingBlocked) { BlockedPeopleSheet() }
             .sheet(isPresented: $state.isEditingAbout) {
                 AboutLineSheet(current: state.me?.about) { about in
                     state.me = state.me.map { CommunityMe(standing: $0.standing, about: about, memberId: $0.memberId) }

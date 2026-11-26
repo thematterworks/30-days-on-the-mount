@@ -685,6 +685,7 @@ struct CommunityMe: Decodable, Sendable {
     let standing: Standing
     let about: String?
     let memberId: String
+    var agreed: Bool? = nil
 }
 
 /// What happened to something shared: up now, waiting to be read, or held —
@@ -696,6 +697,15 @@ struct ShareOutcome: Decodable, Sendable {
     let post: SharedPost?
     /// Why it was held, when the writer should know (e.g. contact details among strangers).
     var notice: String?
+    /// Nothing was posted: the Community Guidelines haven't been agreed to yet.
+    var needsAgreement: Bool?
+}
+
+/// Someone the participant has blocked.
+struct BlockedPerson: Decodable, Identifiable, Hashable, Sendable {
+    let id: String
+    let name: String
+    let since: Date
 }
 
 struct WalkingGroup: Decodable, Identifiable, Hashable, Sendable {
@@ -747,6 +757,11 @@ protocol TogetherService: Sendable {
     func communityMe() async throws -> CommunityMe
     func setAbout(_ about: String) async throws -> String?
     func clearNotice() async throws
+    func agreeToGuidelines() async throws
+    func block(postID: String) async throws
+    func block(memberID: String, group id: String) async throws
+    func blocked() async throws -> [BlockedPerson]
+    func unblock(memberID: String) async throws
     func matchStatus() async throws -> MatchStatus
     func requestMatch(adult: Bool, agreed: Bool, firstName: String?) async throws -> (MatchStatus, [WalkingGroup], groupID: String?)
     func cancelMatch() async throws -> MatchStatus
@@ -838,6 +853,28 @@ struct RemoteTogetherService: TogetherService {
         let _: OK = try await client.send("DELETE", "api/mobile/together/me", body: Optional<[String: String]>.none)
     }
 
+    func agreeToGuidelines() async throws {
+        let _: OK = try await client.send("POST", "api/mobile/together/agree", body: Optional<[String: String]>.none)
+    }
+
+    func block(postID: String) async throws {
+        let _: OK = try await client.send("POST", "api/mobile/together/blocks", body: ["postId": postID])
+    }
+
+    func block(memberID: String, group id: String) async throws {
+        let _: OK = try await client.send("POST", "api/mobile/together/blocks", body: ["memberId": memberID, "groupId": id])
+    }
+
+    func blocked() async throws -> [BlockedPerson] {
+        struct Response: Decodable { let blocked: [BlockedPerson] }
+        let response: Response = try await client.get("api/mobile/together/blocks")
+        return response.blocked
+    }
+
+    func unblock(memberID: String) async throws {
+        let _: OK = try await client.send("DELETE", "api/mobile/together/blocks", body: ["memberId": memberID])
+    }
+
     private struct Status: Decodable { let status: MatchStatus }
 
     func matchStatus() async throws -> MatchStatus {
@@ -917,10 +954,15 @@ struct PreviewTogetherService: TogetherService {
                    currentDay: 4, startedOn: "2026-11-20", about: "Learning to slow down.", groupsInCommon: [])
     }
     func communityMe() async throws -> CommunityMe {
-        CommunityMe(standing: .init(status: "active", pausedUntil: nil, notice: nil), about: nil, memberId: "me")
+        CommunityMe(standing: .init(status: "active", pausedUntil: nil, notice: nil), about: nil, memberId: "me", agreed: true)
     }
     func setAbout(_ about: String) async throws -> String? { about.isEmpty ? nil : about }
     func clearNotice() async throws {}
+    func agreeToGuidelines() async throws {}
+    func block(postID: String) async throws {}
+    func block(memberID: String, group id: String) async throws {}
+    func blocked() async throws -> [BlockedPerson] { [] }
+    func unblock(memberID: String) async throws {}
     func matchStatus() async throws -> MatchStatus { MatchStatus(state: .none, termsAccepted: false) }
     func requestMatch(adult: Bool, agreed: Bool, firstName: String?) async throws -> (MatchStatus, [WalkingGroup], groupID: String?) {
         (MatchStatus(state: .waiting, since: .now), [], nil)

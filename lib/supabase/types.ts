@@ -62,6 +62,15 @@ export type UserRow = {
   community_notice: string | null;
   /** "A word about me", on their member card. */
   about: string | null;
+  /** When they agreed to the Community Guidelines, before first posting. */
+  community_agreed_at: string | null;
+};
+
+export type CommunityBlockRow = {
+  blocker: string;
+  blocked: string;
+  blocked_name: string | null;
+  created_at: string;
 };
 
 export type GiftRow = {
@@ -344,6 +353,12 @@ export type Database = {
         Row: MonthlyGiverRow;
         Insert: Partial<MonthlyGiverRow> & { stripe_subscription: string; status: string };
         Update: Partial<MonthlyGiverRow>;
+        Relationships: [];
+      };
+      community_blocks: {
+        Row: CommunityBlockRow;
+        Insert: Partial<CommunityBlockRow> & { blocker: string; blocked: string };
+        Update: Partial<CommunityBlockRow>;
         Relationships: [];
       };
       community_strikes: {

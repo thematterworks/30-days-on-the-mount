@@ -77,7 +77,8 @@ export function CommunityDrawer({
       const response = await fetch(`/api/journey/community/${dayNumber}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reflection_text: value, anonymous }),
+        // Sharing is agreeing to the Community Guidelines (the line by the button).
+        body: JSON.stringify({ reflection_text: value, anonymous, agreed: true }),
       });
       const data = (await response.json().catch(() => null)) as
         | { reflection?: Reflection | null; outcome?: "shared" | "pending" | "held"; support?: boolean; error?: string }
@@ -194,6 +195,13 @@ export function CommunityDrawer({
                   {submitting ? "Sharing…" : "Share"}
                 </button>
               </div>
+              <p className="mt-2 text-[11px] text-zoe-ink-muted">
+                By sharing, you agree to the{" "}
+                <a href="/community-guidelines" target="_blank" className="underline">
+                  Community Guidelines
+                </a>
+                .
+              </p>
             </div>
           </motion.div>
         </>

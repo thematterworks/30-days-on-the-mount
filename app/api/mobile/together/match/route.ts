@@ -29,10 +29,11 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await readJson(request);
-  const changes: { walking_terms_accepted_at?: string; first_name?: string } = {};
+  const changes: { walking_terms_accepted_at?: string; community_agreed_at?: string; first_name?: string } = {};
   if (!participant.walking_terms_accepted_at) {
     if (body.adult !== true || body.agreed !== true) return badRequest("Confirm you're 18 or older and agree to the guidelines.");
     changes.walking_terms_accepted_at = new Date().toISOString();
+    changes.community_agreed_at ??= participant.community_agreed_at ?? changes.walking_terms_accepted_at;
   }
   const offeredName = typeof body.firstName === "string" ? body.firstName.trim().slice(0, 40) : "";
   if (!participant.first_name?.trim()) {

@@ -11,10 +11,13 @@ struct MemberRequest: Identifiable, Hashable {
 struct MemberCardSheet: View {
     let groupID: String
     let memberID: String
+    var onBlocked: (() -> Void)?
 
     @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
     @State private var card: MemberCard?
     @State private var problem: String?
+    @State private var isConfirmingBlock = false
 
     var body: some View {
         VStack(spacing: 18) {
@@ -38,6 +41,11 @@ struct MemberCardSheet: View {
                         .foregroundStyle(Zoe.inkMuted)
                         .multilineTextAlignment(.center)
                 }
+                Spacer(minLength: 8)
+                Button("Block \(card.name)", systemImage: "hand.raised") { isConfirmingBlock = true }
+                    .font(.footnote)
+                    .foregroundStyle(Zoe.inkMuted)
+                    .buttonStyle(.plain)
             } else if let problem {
                 Text(problem).foregroundStyle(Zoe.inkMuted)
             } else {
@@ -50,6 +58,17 @@ struct MemberCardSheet: View {
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
         .presentationBackground { ZoeAtmosphere(glow: 0.4) }
+        .confirmationDialog("Block \(card?.name ?? "this person")?", isPresented: $isConfirmingBlock, titleVisibility: .visible) {
+            Button("Block", role: .destructive) {
+                Task {
+                    try? await model.together.block(memberID: memberID, group: groupID)
+                    onBlocked?()
+                    dismiss()
+                }
+            }
+        } message: {
+            Text("You won't see each other's posts, and you'll never be matched into the same group. You can unblock in Profile.")
+        }
         .task {
             do {
                 card = try await model.together.member(memberID, group: groupID)

@@ -1,6 +1,7 @@
 import "server-only";
 import crypto from "node:crypto";
 import { sendAppNotification } from "@/lib/apns";
+import { blockedPairs } from "@/lib/blocks";
 import { MAX_MATCHED_GROUP_SIZE, isMember, postAsCompanion } from "@/lib/community";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { UserRow } from "@/lib/supabase/types";
@@ -124,11 +125,15 @@ export async function formGroups(): Promise<number> {
   const windowFor = (person: Waiting) => (person.waitedHours >= PATIENCE_HOURS ? WIDE_DAY_WINDOW : DAY_WINDOW);
   let placed = 0;
 
-  // Into a group that already exists — the one nearest in days.
+  // Never together: anyone who has blocked another.
   const open = await openMatchedGroups();
+  const pairs = await blockedPairs([...new Set([...waiting.map((person) => person.phone), ...open.flatMap((group) => group.phones)])]);
+  const clashes = (phone: string, others: string[]) => others.some((other) => pairs.has(`${phone}|${other}`));
+
+  // Into a group that already exists — the one nearest in days.
   for (const person of [...waiting]) {
     const fits = open
-      .filter((group) => group.size < MAX_MATCHED_GROUP_SIZE && group.size > 0 && !group.phones.includes(person.phone))
+      .filter((group) => group.size < MAX_MATCHED_GROUP_SIZE && group.size > 0 && !group.phones.includes(person.phone) && !clashes(person.phone, group.phones))
       .filter((group) => Math.abs(group.day - person.day) <= windowFor(person))
       .sort((a, b) => Math.abs(a.day - person.day) - Math.abs(b.day - person.day) || a.size - b.size);
     const group = fits[0];
@@ -146,10 +151,13 @@ export async function formGroups(): Promise<number> {
   const usedNames = new Set(open.map((group) => group.name));
   while (waiting.length > 0) {
     const anchor = waiting[0];
-    const nearby = waiting
-      .filter((other) => Math.abs(other.day - anchor.day) <= windowFor(anchor))
-      .sort((a, b) => Math.abs(a.day - anchor.day) - Math.abs(b.day - anchor.day))
-      .slice(0, MAX_MATCHED_GROUP_SIZE);
+    const nearby: Waiting[] = [];
+    for (const other of waiting
+      .filter((candidate) => Math.abs(candidate.day - anchor.day) <= windowFor(anchor))
+      .sort((a, b) => Math.abs(a.day - anchor.day) - Math.abs(b.day - anchor.day))) {
+      if (nearby.length >= MAX_MATCHED_GROUP_SIZE) break;
+      if (!clashes(other.phone, nearby.map((person) => person.phone))) nearby.push(other);
+    }
     const enough = nearby.length >= MIN_TO_FORM || (nearby.length >= 2 && anchor.waitedHours >= PATIENCE_HOURS);
     if (!enough) {
       waiting = waiting.slice(1);
