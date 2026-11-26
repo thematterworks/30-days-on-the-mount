@@ -10,7 +10,6 @@ export default async function Icon() {
   const source = await readFile(path.join(process.cwd(), "components/site/icon-source.png"));
   return new ImageResponse(
     (
-      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={`data:image/png;base64,${source.toString("base64")}`}
         width={512}
