@@ -1,66 +1,60 @@
 import SwiftUI
 
-/// Hold along the right edge of the journey and a dotted path of the days
-/// fades in; slide to move through them, a light tick at each day, and the
-/// page follows. Only the days that are open — the journey still can't be
-/// run ahead of.
+/// Touch the right edge of the journey and a dotted path of the days fades
+/// in; slide along it — a light tick at each day, the day's name beside your
+/// finger — and let go to go to that day. Only the days that are open: the
+/// journey still can't be run ahead of.
+///
+/// The edge sits over the journey, not inside its scroll view, so the two
+/// never compete for the touch; and the page moves once, on release, rather
+/// than scrolling through every day the finger passes.
 struct DayScrubber: View {
     /// The days that can be visited, in order.
     let days: [JourneyDay]
     let current: Int?
     let onSelect: (Int) -> Void
 
-    /// The day under the finger while scrubbing; nil otherwise.
-    @State private var active: Int?
-    /// Where the hold began, and the day it began on: until the finger moves,
-    /// the scrub stays on that day.
-    @State private var origin: (y: CGFloat, index: Int)?
+    /// The finger's height while it's on the edge. Gesture state resets
+    /// itself whenever the touch ends or is cancelled, so the scrubber can
+    /// never be left open.
+    @GestureState private var touchY: CGFloat?
 
     var body: some View {
         GeometryReader { proxy in
             let height = proxy.size.height
+            let active = touchY.map { index(at: $0, in: height) }
             ZStack(alignment: .trailing) {
                 if let active, days.indices.contains(active) {
                     track(height: height, active: active)
                     label(days[active])
                         .position(x: proxy.size.width - 70, y: position(of: active, in: height))
-                        .animation(.snappy(duration: 0.18), value: active)
+                        .animation(.snappy(duration: 0.16), value: active)
                 }
-                // The edge that answers a hold. A native long-press: it
-                // tracks the finger once recognised, and always reports its
-                // end — lifted, cancelled or interrupted — so the scrubber
-                // can't be left open.
                 Color.clear
-                    .frame(width: 30)
+                    .frame(width: 28)
                     .contentShape(Rectangle())
-                    .gesture(EdgeHold { y in update(y, height: height) })
+                    .gesture(
+                        DragGesture(minimumDistance: 0, coordinateSpace: .local)
+                            .updating($touchY) { value, state, _ in state = value.location.y }
+                            .onEnded { value in
+                                // A tap on the edge only shows the path; a slide chooses a day.
+                                guard !days.isEmpty, abs(value.translation.height) > 8 else { return }
+                                onSelect(days[index(at: value.location.y, in: height)].dayNumber)
+                            }
+                    )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-            .animation(.easeOut(duration: 0.2), value: active == nil)
+            .animation(.easeOut(duration: 0.18), value: touchY == nil)
+            .sensoryFeedback(.selection, trigger: active)
         }
         .accessibilityHidden(true)
     }
 
-    private func update(_ y: CGFloat?, height: CGFloat) {
-        guard let y, !days.isEmpty else {
-            active = nil
-            origin = nil
-            return
-        }
-        guard let origin else {
-            let start = days.firstIndex { $0.dayNumber == current } ?? days.count - 1
-            self.origin = (y, start)
-            active = start
-            return
-        }
-        // Held but not yet moved: the day it began on.
-        guard abs(y - origin.y) > 6 else { return }
+    /// The day nearest the finger.
+    private func index(at y: CGFloat, in height: CGFloat) -> Int {
         let (top, length) = bounds(height)
         let fraction = min(max((y - top) / max(length, 1), 0), 1)
-        let index = Int((fraction * CGFloat(days.count - 1)).rounded())
-        guard index != active else { return }
-        active = index
-        onSelect(days[index].dayNumber)
+        return Int((fraction * CGFloat(max(days.count - 1, 0))).rounded())
     }
 
     /// The line runs down the middle 64% of the edge.
@@ -111,29 +105,6 @@ struct DayScrubber: View {
         .fixedSize()
         .frame(width: 110, alignment: .trailing)
         .transition(.opacity)
-    }
-}
-
-/// A press held on the edge, then followed: the finger's height while held,
-/// nil once it ends for any reason.
-private struct EdgeHold: UIGestureRecognizerRepresentable {
-    let onChange: (CGFloat?) -> Void
-
-    func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
-        let recognizer = UILongPressGestureRecognizer()
-        recognizer.minimumPressDuration = 0.18
-        // A little drift while pressing is still a hold, not a scroll.
-        recognizer.allowableMovement = 16
-        return recognizer
-    }
-
-    func handleUIGestureRecognizerAction(_ recognizer: UILongPressGestureRecognizer, context: Context) {
-        switch recognizer.state {
-        case .began, .changed:
-            onChange(context.converter.localLocation.y)
-        default:
-            onChange(nil)
-        }
     }
 }
 
