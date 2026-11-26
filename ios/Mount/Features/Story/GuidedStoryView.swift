@@ -130,7 +130,7 @@ struct GuidedStoryView: View {
             }
             .scrollTargetLayout()
         }
-        .scrollTargetBehavior(.paging)
+        .scrollTargetBehavior(GentlePaging())
         .scrollPosition(id: $page)
         .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.immediately)
@@ -166,7 +166,7 @@ struct GuidedStoryView: View {
     private func turn(by direction: Int, count: Int) {
         let next = min(max(index + direction, 0), count - 1)
         guard next != index else { return }
-        withAnimation(.smooth(duration: 0.45)) { page = next }
+        withAnimation(.smooth(duration: 0.7)) { page = next }
     }
 
     @ViewBuilder
@@ -384,5 +384,20 @@ private struct ThresholdView: View {
             breath = count
         }
         withAnimation { cue = "When you're ready" }
+    }
+}
+
+/// A card a swipe, like paging, but the card eases into place at the scroll
+/// view's normal deceleration instead of paging's quick snap.
+struct GentlePaging: ScrollTargetBehavior {
+    func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
+        let height = context.containerSize.height
+        guard height > 0 else { return }
+        let last = max(((context.contentSize.height / height).rounded()) - 1, 0)
+        let from = (context.originalTarget.rect.minY / height).rounded()
+        // Wherever the swipe would have carried it, at most one card on.
+        let landing = (target.rect.minY / height).rounded()
+        let page = min(max(landing, from - 1, 0), from + 1, last)
+        target.rect.origin.y = page * height
     }
 }
