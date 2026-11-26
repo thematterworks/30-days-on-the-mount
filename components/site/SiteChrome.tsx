@@ -39,6 +39,7 @@ export function SiteFooter() {
           <Link href="/terms" className="hover:text-white">Terms</Link>
           <Link href="/privacy" className="hover:text-white">Privacy</Link>
           <Link href="/community-guidelines" className="hover:text-white">Community Guidelines</Link>
+          <Link href="/give" className="hover:text-white">Give</Link>
           <a href="mailto:30daysonthemount@gmail.com" className="hover:text-white">Contact</a>
         </nav>
       </div>

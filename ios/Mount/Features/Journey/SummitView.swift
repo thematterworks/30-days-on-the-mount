@@ -70,6 +70,8 @@ struct SummitPage: View {
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            SummitGiveLink()
+                .padding(.top, 6)
         }
         .padding(.horizontal, 32)
         .padding(.bottom, 76)

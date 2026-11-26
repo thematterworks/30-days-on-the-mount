@@ -49,8 +49,11 @@ struct ProfileView: View {
 
                 Section {
                     ShareJourneyCard()
+                    GiveCard()
+                        .padding(.top, 12)
                 }
                 .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
 
                 CommunitySection(state: community)
