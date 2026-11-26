@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// A slim handle rests on the right edge at your place in the thirty days,
-/// riding along as you swipe, a cue that the edge can be held. Touch it and
-/// the dotted path of the days opens; slide along it — a light tick at each
-/// day, the day's name just above your finger — and the journey turns with
-/// you, day by day. Every day is on the path; a day that hasn't opened yet
+/// A quiet column of marks rests on the right edge, one a day, the day in
+/// view a short peach bar that follows each swipe. Touch it and the dotted
+/// path of the days opens; slide along it — a light tick at each day, the
+/// day's name just above your finger — and the journey turns with you, day
+/// by day. Every day is on the path; a day that hasn't opened yet
 /// shows as its locked page.
 ///
 /// The edge sits over the journey, not inside its scroll view, so the two
@@ -13,6 +13,8 @@ struct DayScrubber: View {
     /// The days that can be visited, in order.
     let days: [JourneyDay]
     let current: Int?
+    /// Today, so the days walked can be told from the days ahead.
+    let today: Int
     let onSelect: (Int) -> Void
 
     /// The finger's height while it's on the edge. Gesture state resets
@@ -87,18 +89,23 @@ struct DayScrubber: View {
         return top + length * CGFloat(index) / CGFloat(days.count - 1)
     }
 
-    /// At rest: one slim handle at the day in view, like a scroll thumb,
-    /// so the edge reads as something to hold without the whole path.
+    /// At rest: a fine mark a day, the walked days faintly peach, the day in
+    /// view a short bar, the welcome's scene marks in miniature.
     private func resting(height: CGFloat) -> some View {
-        let index = current.flatMap { day in days.firstIndex { $0.dayNumber == day } }
-        return Capsule()
-            .fill(Zoe.ink.opacity(0.4))
-            .frame(width: 3.5, height: 34)
-            .frame(width: 12)
-            .offset(x: -4, y: index.map { position(of: $0, in: height) - 17 } ?? height * 0.82 - 17)
-            .frame(width: 26, height: height, alignment: .topTrailing)
-            .animation(.smooth, value: current)
-            .transition(.opacity)
+        ZStack(alignment: .topTrailing) {
+            ForEach(days.indices, id: \.self) { index in
+                let number = days[index].dayNumber
+                let isCurrent = number == current
+                Capsule()
+                    .fill(isCurrent ? Zoe.peach : number <= today ? Zoe.peach.opacity(0.5) : Zoe.ink.opacity(0.22))
+                    .frame(width: isCurrent ? 3 : 2.5, height: isCurrent ? 16 : 2.5)
+                    .frame(width: 12, height: 16)
+                    .offset(x: -4, y: position(of: index, in: height) - 8)
+            }
+        }
+        .frame(width: 26, height: height, alignment: .topTrailing)
+        .animation(.smooth, value: current)
+        .transition(.opacity)
     }
 
     /// A dotted path, one small circle a day — the welcome tour's path of
