@@ -18,12 +18,21 @@ struct LiveActivityController: Sendable {
         ActivityAuthorizationInfo().areActivitiesEnabled
     }
 
-    func startCarrying(_ day: JourneyDay, totalDays: Int) async {
-        await show(day: day, totalDays: totalDays, state: .init(phase: .carrying, prompt: nil))
+    /// `until`: when the next day begins. After it, the activity shows as
+    /// out of date ("a new day is waiting") until the app ends it.
+    func startCarrying(_ day: JourneyDay, totalDays: Int, until: Date) async {
+        await show(day: day, totalDays: totalDays, state: .init(phase: .carrying, prompt: nil), until: until)
     }
 
-    func beginEveningCheckIn(_ day: JourneyDay, totalDays: Int, prompt: String) async {
-        await show(day: day, totalDays: totalDays, state: .init(phase: .eveningCheckIn, prompt: prompt))
+    func beginEveningCheckIn(_ day: JourneyDay, totalDays: Int, prompt: String, until: Date) async {
+        await show(day: day, totalDays: totalDays, state: .init(phase: .eveningCheckIn, prompt: prompt), until: until)
+    }
+
+    /// Ends any activity left from an earlier day.
+    func endDays(before dayNumber: Int) async {
+        for activity in Activity<DayActivityAttributes>.activities where activity.attributes.dayNumber < dayNumber {
+            await activity.end(nil, dismissalPolicy: .immediate)
+        }
     }
 
     func endAll() async {
@@ -32,12 +41,12 @@ struct LiveActivityController: Sendable {
         }
     }
 
-    private func show(day: JourneyDay, totalDays: Int, state: DayActivityAttributes.ContentState) async {
+    private func show(day: JourneyDay, totalDays: Int, state: DayActivityAttributes.ContentState, until: Date) async {
         guard isAvailable else {
             Logger.liveActivity.info("Live Activities are disabled; skipping")
             return
         }
-        let content = ActivityContent(state: state, staleDate: Calendar.current.startOfDay(for: .now).addingTimeInterval(86_400))
+        let content = ActivityContent(state: state, staleDate: until)
 
         if let existing = Activity<DayActivityAttributes>.activities.first(where: { $0.attributes.dayNumber == day.dayNumber }) {
             await existing.update(content)

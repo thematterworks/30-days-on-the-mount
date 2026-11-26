@@ -162,7 +162,7 @@ struct JourneyView: View {
         if let today = journey.today {
             Button("Send evening check-in (preview)", systemImage: "moon.stars") {
                 Task {
-                    await model.liveActivity.beginEveningCheckIn(today, totalDays: journey.totalDays, prompt: "How did today's practice meet you?")
+                    await model.liveActivity.beginEveningCheckIn(today, totalDays: journey.totalDays, prompt: "How did today's practice meet you?", until: journey.nextMorning())
                     await model.notifications.scheduleCheckInPreview(dayNumber: today.dayNumber, prompt: "How did today's practice meet you?")
                 }
             }

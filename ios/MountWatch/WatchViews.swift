@@ -7,7 +7,7 @@ struct WatchRootView: View {
 
     var body: some View {
         TabView {
-            TodayPage(snapshot: receiver.snapshot)
+            TodayPage(snapshot: receiver.snapshot?.current(at: .now))
                 .containerBackground(Zoe.gradient, for: .tabView)
             BreathePage()
                 .containerBackground(Zoe.gradient, for: .tabView)

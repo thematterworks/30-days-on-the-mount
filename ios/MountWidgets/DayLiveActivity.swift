@@ -9,10 +9,13 @@ import WidgetKit
 struct DayLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: DayActivityAttributes.self) { context in
-            LockScreenDayView(attributes: context.attributes, state: context.state)
+            LockScreenDayView(attributes: context.attributes, state: context.state, isStale: context.isStale)
                 .activityBackgroundTint(Zoe.deep.opacity(0.92))
                 .activitySystemActionForegroundColor(Zoe.peach)
-                .widgetURL(link(for: context.attributes, state: context.state).url)
+                // Past the next morning: the new day, which the app syncs to on open.
+                .widgetURL(context.isStale
+                    ? DeepLink.day(min(context.attributes.dayNumber + 1, context.attributes.totalDays)).url
+                    : link(for: context.attributes, state: context.state).url)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
@@ -83,8 +86,32 @@ private func link(for attributes: DayActivityAttributes, state: DayActivityAttri
 private struct LockScreenDayView: View {
     let attributes: DayActivityAttributes
     let state: DayActivityAttributes.ContentState
+    /// The next morning has come and the app hasn't ended this yet.
+    var isStale = false
 
     var body: some View {
+        if isStale {
+            HStack(spacing: 16) {
+                JourneyRing(day: attributes.dayNumber, total: attributes.totalDays)
+                    .frame(width: 44, height: 44)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Day \(min(attributes.dayNumber + 1, attributes.totalDays))").zoeLabelStyle(Zoe.peach)
+                    Text("A new day is waiting")
+                        .font(.system(.headline, design: .serif))
+                        .foregroundStyle(Zoe.ink)
+                    Text("Open On the Mount to begin.")
+                        .font(.footnote)
+                        .foregroundStyle(Zoe.inkMuted)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(16)
+        } else {
+            current
+        }
+    }
+
+    private var current: some View {
         HStack(spacing: 16) {
             JourneyRing(day: attributes.dayNumber, total: attributes.totalDays)
                 .frame(width: 44, height: 44)

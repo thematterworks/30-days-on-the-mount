@@ -16,6 +16,7 @@ struct MountApp: App {
                 }
                 .task {
                     appDelegate.onDeviceToken = { [model] token in model.didReceiveDeviceToken(token) }
+                    appDelegate.onBackgroundRefresh = { [model] in await model.journey.sync() }
                 }
         }
     }

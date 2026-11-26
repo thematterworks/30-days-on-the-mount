@@ -25,21 +25,32 @@ struct TodayProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<TodayEntry>) -> Void) {
         let now = Date.now
         let entries = Self.entries(at: now, snapshot: SharedStore.loadSnapshot() ?? .placeholder)
+        // Asks again after the last entry, or by tomorrow at the latest.
         let tomorrow = Calendar.current.startOfDay(for: now).addingTimeInterval(86_400 + 300)
-        completion(Timeline(entries: entries, policy: .after(tomorrow)))
+        let after = max(entries.last.map { $0.date.addingTimeInterval(60) } ?? tomorrow, now.addingTimeInterval(900))
+        completion(Timeline(entries: entries, policy: .after(min(after, tomorrow))))
     }
 
     /// The day now, then — if it hasn't come yet — the same day at its
-    /// evening hour, so the widget turns over on its own.
+    /// evening hour, then tomorrow from the next morning: the widget turns
+    /// over on its own even when the app isn't opened.
     static func entries(at now: Date, snapshot: JourneySnapshot, calendar: Calendar = .current) -> [TodayEntry] {
-        guard let hour = snapshot.eveningHour,
-              let evening = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: now) else {
-            return [TodayEntry(date: now, snapshot: snapshot)]
+        let today = snapshot.current(at: now)
+        var entries: [TodayEntry]
+        if let hour = today.eveningHour,
+           let evening = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: now) {
+            entries = now >= evening
+                ? [TodayEntry(date: now, snapshot: today, isEvening: true)]
+                : [TodayEntry(date: now, snapshot: today), TodayEntry(date: evening, snapshot: today, isEvening: true)]
+        } else {
+            entries = [TodayEntry(date: now, snapshot: today)]
         }
-        if now >= evening {
-            return [TodayEntry(date: now, snapshot: snapshot, isEvening: true)]
+        // Tomorrow, from its morning (if this snapshot hasn't already passed it).
+        if let next = snapshot.following?.first, let turnsAt = snapshot.turnsAt, turnsAt > now {
+            entries.removeAll { $0.date >= turnsAt }
+            entries.append(TodayEntry(date: turnsAt, snapshot: next))
         }
-        return [TodayEntry(date: now, snapshot: snapshot), TodayEntry(date: evening, snapshot: snapshot, isEvening: true)]
+        return entries
     }
 }
 

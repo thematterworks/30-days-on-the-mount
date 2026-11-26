@@ -78,6 +78,10 @@ function sendOne(
       alert: { title: notification.title, body: notification.body },
       sound: "default",
       ...(notification.category ? { category: notification.category } : {}),
+      // A notification about a day also wakes the app briefly in the
+      // background, so it catches up with the server (the new day) and
+      // refreshes its widgets and Live Activity even if it isn't opened.
+      ...(notification.dayNumber !== undefined ? { "content-available": 1 } : {}),
     },
     link: notification.link,
     ...(notification.dayNumber !== undefined ? { dayNumber: notification.dayNumber } : {}),

@@ -25,14 +25,19 @@ struct DayProvider: TimelineProvider {
     func placeholder(in context: Context) -> DayEntry { DayEntry(date: .now, snapshot: .placeholder) }
 
     func getSnapshot(in context: Context, completion: @escaping (DayEntry) -> Void) {
-        completion(DayEntry(date: .now, snapshot: SharedStore.loadSnapshot() ?? .placeholder))
+        completion(DayEntry(date: .now, snapshot: (SharedStore.loadSnapshot() ?? .placeholder).current(at: .now)))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<DayEntry>) -> Void) {
-        let entry = DayEntry(date: .now, snapshot: SharedStore.loadSnapshot() ?? .placeholder)
+        let snapshot = SharedStore.loadSnapshot() ?? .placeholder
+        var entries = [DayEntry(date: .now, snapshot: snapshot.current(at: .now))]
+        // Tomorrow from its morning, so the complication turns over on its own.
+        if let next = snapshot.following?.first, let turnsAt = snapshot.turnsAt, turnsAt > .now {
+            entries.append(DayEntry(date: turnsAt, snapshot: next))
+        }
         // The phone reloads this whenever the day changes; an hourly look
         // keeps it honest if a message is missed.
-        completion(Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(3600))))
+        completion(Timeline(entries: entries, policy: .after(.now.addingTimeInterval(3600))))
     }
 }
 

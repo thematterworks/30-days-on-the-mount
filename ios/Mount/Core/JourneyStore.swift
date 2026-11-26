@@ -86,11 +86,13 @@ final class JourneyStore {
 
         let currentDay = min(max(remote.currentDay, 1), max(totalDays, 1))
         if currentDay != progress.currentDay {
-            // A new morning: yesterday's Live Activity has done its work.
-            if currentDay > progress.currentDay { await liveActivity.endAll() }
             progress.currentDay = currentDay
         }
+        // A new morning: yesterday's Live Activity has done its work.
+        await liveActivity.endDays(before: currentDay)
         persist()
+        // The widgets and the watch show the day the server says it is.
+        publishSnapshot()
     }
 
     /// The participant finished the day's guided story and carried the
@@ -100,7 +102,7 @@ final class JourneyStore {
         progress.finishedStories.insert(day.dayNumber)
         persist()
         if day.dayNumber == progress.currentDay, settings.liveActivities {
-            await liveActivity.startCarrying(day, totalDays: totalDays)
+            await liveActivity.startCarrying(day, totalDays: totalDays, until: nextMorning())
         }
     }
 
@@ -169,21 +171,37 @@ final class JourneyStore {
     /// them to redraw.
     private func publishSnapshot() {
         guard let today else { return }
-        let snapshot = JourneySnapshot(
-            dayNumber: today.dayNumber,
-            totalDays: totalDays,
-            title: today.title,
-            practiceTitle: today.practiceTitle,
-            hookText: today.hookText,
-            finishedToday: progress.hasFinishedToday,
-            updatedAt: .now,
-            verse: JourneySnapshot.lockScreenVerse(from: today.scriptureText),
-            verseReference: today.scriptureReference,
-            eveningPrompt: today.eveningPrompt,
-            eveningHour: (settings.morningHour + 11) % 24
-        )
+        var snapshot = snapshot(of: today, finished: progress.hasFinishedToday)
+        // Tomorrow, and the moment it begins: the next morning hour, when the
+        // server moves the participant on and sends the morning invitation.
+        if let next = day(today.dayNumber + 1) {
+            snapshot.following = [self.snapshot(of: next, finished: false)]
+            snapshot.turnsAt = nextMorning()
+        }
         SharedStore.saveSnapshot(snapshot)
         WidgetCenter.shared.reloadAllTimelines()
         WatchBridge.shared.send(snapshot)
+    }
+
+    private func snapshot(of day: JourneyDay, finished: Bool) -> JourneySnapshot {
+        JourneySnapshot(
+            dayNumber: day.dayNumber,
+            totalDays: totalDays,
+            title: day.title,
+            practiceTitle: day.practiceTitle,
+            hookText: day.hookText,
+            finishedToday: finished,
+            updatedAt: .now,
+            verse: JourneySnapshot.lockScreenVerse(from: day.scriptureText),
+            verseReference: day.scriptureReference,
+            eveningPrompt: day.eveningPrompt,
+            eveningHour: (settings.morningHour + 11) % 24
+        )
+    }
+
+    /// The next time the morning hour comes round: when a new day begins.
+    func nextMorning(after date: Date = .now, calendar: Calendar = .current) -> Date {
+        let today = calendar.date(bySettingHour: settings.morningHour, minute: 0, second: 0, of: date) ?? date
+        return today > date ? today : calendar.date(byAdding: .day, value: 1, to: today) ?? today
     }
 }

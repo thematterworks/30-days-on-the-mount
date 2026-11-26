@@ -308,12 +308,31 @@ final class AppModel {
         return agreed
     }
 
+    /// Opens a day's story from a notification, widget or link. A link to a
+    /// day this phone doesn't know is open yet — the morning invitation,
+    /// tapped before the app has heard the day turned — first catches up
+    /// with the server (waiting for the curriculum on a cold launch).
+    private func openDay(_ number: Int, route: @escaping @MainActor () -> StoryRoute) {
+        if journey.canOpen(number) {
+            selectedTab = .journey
+            storyRoute = route()
+            return
+        }
+        Task {
+            for _ in 0..<50 where journey.days.isEmpty {
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            await journey.sync()
+            guard journey.canOpen(number) else { return }
+            selectedTab = .journey
+            storyRoute = route()
+        }
+    }
+
     func open(_ link: DeepLink) {
         switch link {
         case .day(let number):
-            guard journey.canOpen(number) else { return }
-            selectedTab = .journey
-            storyRoute = StoryRoute(dayNumber: number)
+            openDay(number) { StoryRoute(dayNumber: number) }
         case .join(let code):
             storyRoute = nil
             pendingInvite = code
@@ -323,9 +342,7 @@ final class AppModel {
             pendingGroup = id
             isProfilePresented = true
         case .deeper(let number):
-            guard journey.canOpen(number) else { return }
-            selectedTab = .journey
-            storyRoute = StoryRoute(dayNumber: number, startsAtTeaching: true)
+            openDay(number) { StoryRoute(dayNumber: number, startsAtTeaching: true) }
         case .companion:
             // The story is a full-screen cover; it closes so the companion
             // tab is what the participant lands on.

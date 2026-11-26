@@ -18,6 +18,18 @@ struct JourneySnapshot: Codable, Equatable, Sendable {
     /// Local hour the evening check-in arrives: the morning hour plus 11, as
     /// the server's evening cron computes it.
     var eveningHour: Int?
+    /// Tomorrow, and when it begins (the morning hour). The widgets and the
+    /// watch switch to it on their own at that time, even if the app isn't
+    /// opened. An array only because a struct can't hold itself directly;
+    /// it has at most one element.
+    var following: [JourneySnapshot]?
+    var turnsAt: Date?
+
+    /// The day as it should show at `date`: tomorrow once its morning has come.
+    func current(at date: Date) -> JourneySnapshot {
+        if let next = following?.first, let turnsAt, date >= turnsAt { return next }
+        return self
+    }
 
     static let fallbackEveningPrompt = "How did today's practice meet you?"
 
