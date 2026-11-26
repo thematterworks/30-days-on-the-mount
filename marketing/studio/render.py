@@ -15,6 +15,9 @@ OUT = os.path.join(ROOT, "app-store")
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 SIZES = {"iphone": (1320, 2868), "ipad": (2064, 2752)}
+# Other sizes App Store Connect asks for, drawn from the same frames: the
+# medium iPhone slot (6.1"/6.3") takes 1206×2622.
+EXTRA_SIZES = {"iphone": [(1206, 2622)]}
 
 TAGLINE = "A 30-day invitation to walk in the<br>wisdom of Jesus' most famous sermon"
 
@@ -54,8 +57,8 @@ def frames():
                          subSize=2.7 if kind == "iphone" else 2.0)
 
 
-def render(kind, frame):
-    w, h = SIZES[kind]
+def render(kind, frame, size=None):
+    w, h = size or SIZES[kind]
     folder = os.path.join(OUT, f"{kind}-{w}x{h}")
     os.makedirs(folder, exist_ok=True)
     out = os.path.join(folder, frame["name"] + ".png")
@@ -119,3 +122,5 @@ if __name__ == "__main__":
         for kind, frame in frames():
             if only in f"{kind}/{frame['name']}":
                 render(kind, frame)
+                for size in EXTRA_SIZES.get(kind, []):
+                    render(kind, frame, size)
