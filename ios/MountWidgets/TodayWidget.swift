@@ -149,10 +149,20 @@ struct TodayWidgetView: View {
         case .systemMedium:
             HStack(alignment: .top, spacing: 16) {
                 header
-                Text(snapshot.hookText)
-                    .font(.system(.footnote, design: .serif))
-                    .foregroundStyle(Zoe.ink.opacity(0.85))
-                    .lineLimit(6)
+                // A column of its own, level with the day's: a label, then
+                // the hook's first sentence whole, not a paragraph cut off
+                // mid-word.
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("The invitation").zoeLabelStyle(Zoe.peach)
+                    Text(Self.tidy(snapshot.hookText))
+                        .font(.system(.footnote, design: .serif))
+                        .foregroundStyle(Zoe.ink.opacity(0.88))
+                        .lineSpacing(3)
+                        .lineLimit(6)
+                        .minimumScaleFactor(0.8)
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .foregroundStyle(Zoe.ink)
 
@@ -178,11 +188,31 @@ struct TodayWidgetView: View {
                 .accessibilityHidden(true)
                 .padding(.top, 2)
             Spacer(minLength: 0)
-            Text(snapshot.finishedToday ? "Carried into today" : snapshot.practiceTitle)
-                .font(.caption2)
-                .foregroundStyle(Zoe.inkMuted)
-                .lineLimit(2)
+            if snapshot.finishedToday {
+                Text("Carried into today")
+                    .font(.caption2)
+                    .foregroundStyle(Zoe.inkMuted)
+            } else {
+                // As on the journey page: the practice, under its label.
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Today's practice")
+                        .zoeLabelStyle(Zoe.inkMuted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Text(snapshot.practiceTitle)
+                        .font(.caption)
+                        .foregroundStyle(Zoe.ink.opacity(0.9))
+                        .lineLimit(family == .systemSmall ? 1 : 2)
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The first sentence, with typographic quotes.
+    static func tidy(_ text: String) -> String {
+        JourneySnapshot.lockScreenVerse(from: text)
+            .replacing(/"([^"]*)"/) { "\u{201C}\($0.1)\u{201D}" }
+            .replacingOccurrences(of: "'", with: "\u{2019}")
     }
 }
