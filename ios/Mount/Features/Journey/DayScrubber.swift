@@ -2,13 +2,13 @@ import SwiftUI
 
 /// A quiet column of marks rests on the right edge, one a day, the day in
 /// view a short peach bar that follows each swipe. Touch it and the dotted
-/// path of the days opens; slide along it — a light tick at each day, the day's name beside your
-/// finger — and let go to go to that day. Every day is on the path; a day
-/// that hasn't opened yet shows as its locked page.
+/// path of the days opens; slide along it — a light tick at each day, the
+/// day's name beside your finger — and the journey turns with you, day by
+/// day. Every day is on the path; a day that hasn't opened yet shows as its
+/// locked page.
 ///
 /// The edge sits over the journey, not inside its scroll view, so the two
-/// never compete for the touch; and the page moves once, on release, rather
-/// than scrolling through every day the finger passes.
+/// never compete for the touch.
 struct DayScrubber: View {
     /// The days that can be visited, in order.
     let days: [JourneyDay]
@@ -20,12 +20,18 @@ struct DayScrubber: View {
     /// The finger's height while it's on the edge. Gesture state resets
     /// itself whenever the touch ends or is cancelled, so the scrubber can
     /// never be left open.
-    @GestureState private var touchY: CGFloat?
+    @GestureState private var touch: Touch?
+
+    struct Touch: Equatable {
+        var y: CGFloat
+        /// A slide, not just a touch: only a slide turns the pages.
+        var moved: Bool
+    }
 
     var body: some View {
         GeometryReader { proxy in
             let height = proxy.size.height
-            let active = touchY.map { index(at: $0, in: height) }
+            let active = touch.map { index(at: $0.y, in: height) }
             ZStack(alignment: .trailing) {
                 if active == nil {
                     resting(height: height)
@@ -41,7 +47,9 @@ struct DayScrubber: View {
                     .contentShape(Rectangle())
                     .gesture(
                         DragGesture(minimumDistance: 0, coordinateSpace: .local)
-                            .updating($touchY) { value, state, _ in state = value.location.y }
+                            .updating($touch) { value, state, _ in
+                                state = Touch(y: value.location.y, moved: (state?.moved ?? false) || abs(value.translation.height) > 8)
+                            }
                             .onEnded { value in
                                 // A tap on the edge only shows the path; a slide chooses a day.
                                 guard !days.isEmpty, abs(value.translation.height) > 8 else { return }
@@ -50,8 +58,13 @@ struct DayScrubber: View {
                     )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-            .animation(.easeOut(duration: 0.18), value: touchY == nil)
+            .animation(.easeOut(duration: 0.18), value: touch == nil)
             .sensoryFeedback(.selection, trigger: active)
+            // The pages follow the finger, a day at a time.
+            .onChange(of: active) { _, active in
+                guard let active, touch?.moved == true, days.indices.contains(active) else { return }
+                onSelect(days[active].dayNumber)
+            }
         }
         .accessibilityHidden(true)
     }
