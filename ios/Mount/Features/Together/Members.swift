@@ -140,6 +140,7 @@ struct AboutLineSheet: View {
             }
         }
         .presentationDetents([.medium])
+        .keyboardDismissible()
         .presentationBackground { ZoeAtmosphere(glow: 0.3) }
         .onAppear { text = current ?? "" }
     }

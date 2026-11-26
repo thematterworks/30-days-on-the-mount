@@ -50,6 +50,7 @@ struct BibleSearch: View {
         .onAppear { focused = true }
         .onDisappear { model.dictation.stop() }
         .presentationDragIndicator(.visible)
+        .keyboardDismissible()
         .presentationBackground { ZoeAtmosphere(glow: 0.3) }
     }
 

@@ -877,14 +877,37 @@ struct PreviewTogetherService: TogetherService {
     }
     func delete(postID: String) async throws {}
     func report(postID: String) async throws {}
-    func groups() async throws -> [WalkingGroup] { [] }
+    static let sampleGroupID = "00000000-0000-0000-0000-000000000001"
+    private static var isShowcase: Bool { ProcessInfo.processInfo.arguments.contains("-previewShowcase") }
+
+    func groups() async throws -> [WalkingGroup] {
+        guard Self.isShowcase else { return [] }
+        return [WalkingGroup(
+            id: Self.sampleGroupID, name: "Tuesday Breakfast Crew", kind: .friends, inviteCode: "ABCD2345",
+            inviteURL: URL(string: "https://www.30daysonthemount.com/journey/join/ABCD2345")!,
+            members: [.init(id: "m0", name: "Grace", isMe: true, currentDay: 13), .init(id: "m1", name: "Marcus", isMe: false, currentDay: 13),
+                      .init(id: "m2", name: "Ana", isMe: false, currentDay: 12), .init(id: "m3", name: "David", isMe: false, currentDay: 13)],
+            unread: 2,
+            lastMessage: .init(name: "Ana", text: "Praying for you both today.", createdAt: .now - 600)
+        )]
+    }
     func createGroup(name: String, anonymous: Bool) async throws -> [WalkingGroup] {
         [WalkingGroup(id: "g1", name: name, kind: .friends, inviteCode: "ABCD2345", inviteURL: URL(string: "https://www.30daysonthemount.com/join/ABCD2345")!,
                       members: [.init(name: "You", isMe: true, currentDay: 1)], unread: 0, lastMessage: nil)]
     }
     func joinGroup(code: String, anonymous: Bool) async throws -> [WalkingGroup] { [] }
     func leaveGroup(_ id: String) async throws {}
-    func groupPosts(_ id: String, since: Date?) async throws -> [SharedPost] { [] }
+    func groupPosts(_ id: String, since: Date?) async throws -> [SharedPost] {
+        guard Self.isShowcase, since == nil else { return [] }
+        let hour: TimeInterval = 3600
+        return [
+            SharedPost(id: "p0", dayNumber: 12, displayName: "Companion", text: "Welcome, walkers. Say hello, and share what brought you here.", createdAt: .now - 30 * hour, mine: false, fromCompanion: true),
+            SharedPost(id: "p1", dayNumber: 13, displayName: "Marcus", text: "Love your enemies. I've been praying for my brother-in-law all week. Something is softening, in me first.", createdAt: .now - 5 * hour, mine: false, authorID: "m1"),
+            SharedPost(id: "p2", dayNumber: 13, displayName: "Grace", text: "Me too. Hardest one yet. Praying for you, Marcus.", createdAt: .now - 4 * hour, mine: true),
+            SharedPost(id: "p3", dayNumber: 13, displayName: "David", text: "I read it on the train this morning and had to put my phone down for a minute.", createdAt: .now - 2 * hour, mine: false, authorID: "m3"),
+            SharedPost(id: "p4", dayNumber: 13, displayName: "Ana", text: "Praying for you both today.", createdAt: .now - 600, mine: false, authorID: "m2"),
+        ]
+    }
     func post(toGroup id: String, day: Int, text: String, media: PostMediaReference?) async throws -> ShareOutcome {
         try await share(day: day, text: text, anonymous: false)
     }

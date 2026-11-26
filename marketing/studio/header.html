@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;1,6..96,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;1,8..60,400&family=Inter:wght@500&display=block" rel="stylesheet">
+<style>
+  /* Wide artwork: the App Store header (3840×1646) and social banners.
+     Everything that matters sits in the middle third, since the header is
+     cropped differently on each device. Units: --u = 1% of the height. */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; }
+  body {
+    --u: 1vh; position: relative; color: #fff;
+    background: linear-gradient(160deg, #8a8396 0%, #737293 40%, #546391 78%, #3d4572 100%);
+    font-family: "Source Serif 4", Georgia, serif;
+  }
+  .light { position: absolute; inset: 0;
+    background: radial-gradient(30% 45% at 50% 18%, rgb(246 205 175 / 0.40), transparent 70%),
+                radial-gradient(40% 50% at 8% 100%, rgb(44 50 84 / 0.55), transparent 70%),
+                radial-gradient(40% 50% at 92% 100%, rgb(44 50 84 / 0.5), transparent 70%); }
+  .ridge { position: absolute; left: 50%; transform: translateX(-50%); width: 120vh; top: 8vh; opacity: 0.55; }
+  .copy { position: absolute; left: 50%; transform: translateX(-50%); top: 31vh; width: 90vh; text-align: center; }
+  .eyebrow { font-family: Inter, sans-serif; font-weight: 500; text-transform: uppercase; letter-spacing: 0.32em; color: #f6cdaf; font-size: calc(2.3 * var(--u)); }
+  h1 { font-family: "Bodoni Moda", Didot, serif; font-weight: 400; font-size: calc(9.6 * var(--u)); line-height: 1; margin-top: calc(2.5 * var(--u)); white-space: nowrap; }
+  .sub { margin-top: calc(3 * var(--u)); font-size: calc(3.8 * var(--u)); color: rgb(255 255 255 / 0.86); }
+  .phone { position: absolute; width: calc(30 * var(--u)); padding: calc(1 * var(--u)); border-radius: calc(5 * var(--u));
+    background: linear-gradient(160deg, #2b2e48, #111325);
+    box-shadow: 0 calc(3 * var(--u)) calc(6 * var(--u)) rgb(15 17 35 / 0.6), inset 0 0 0 calc(0.15 * var(--u)) rgb(255 255 255 / 0.16); }
+  .phone img { display: block; width: 100%; border-radius: calc(4 * var(--u)); }
+</style>
+</head>
+<body>
+<div class="light"></div>
+<!-- The brand lockup (wordmark over the mountain) and its tagline. -->
+<div class="copy" style="top: 9vh; width: 110vh">
+  <img src="Lockup.png" style="display:block; width:100%">
+  <p class="sub" id="sub" style="font-family: Inter, sans-serif; font-weight: 500; text-transform: uppercase; letter-spacing: 0.22em; font-size: calc(2.1 * var(--u)); margin-top: calc(0.5 * var(--u)); white-space: nowrap; margin-left: -20vh; margin-right: -20vh">A 30-day invitation to walk in the wisdom of Jesus' most famous sermon</p>
+</div>
+<div id="phones"></div>
+<script>
+  // Phones fanned out to either side of the title, rising from the bottom
+  // edge; the nearer the middle, the higher.
+  const params = location.hash ? JSON.parse(decodeURIComponent(location.hash.slice(1))) : {};
+  const screens = params.screens ?? [];
+  const W = innerWidth, H = innerHeight, u = H / 100;
+  const slots = [
+    { x: -0.445, y: 54, r: -7 }, { x: -0.335, y: 42, r: -3.5 },
+    { x: 0.335, y: 42, r: 3.5 }, { x: 0.445, y: 54, r: 7 },
+  ];
+  let loaded = 0;
+  screens.slice(0, 4).forEach((src, i) => {
+    const s = slots[i];
+    const phone = document.createElement("div");
+    phone.className = "phone";
+    phone.style.left = (W / 2 + s.x * W - 15 * u) + "px";
+    phone.style.top = s.y * u + "px";
+    phone.style.transform = `rotate(${s.r}deg)`;
+    const img = new Image();
+    img.onload = () => { if (++loaded === Math.min(4, screens.length)) document.title = "ready"; };
+    img.src = src;
+    phone.appendChild(img);
+    document.getElementById("phones").appendChild(phone);
+  });
+  if (params.sub) document.getElementById("sub").innerHTML = params.sub;
+</script>
+</body>
+</html>

@@ -50,7 +50,10 @@ final class SessionStore {
     /// Starts signed in for UI tests and simulator walkthroughs, via the
     /// `-previewSignedIn` launch argument. Compiled out of release builds.
     func signInForPreview() {
-        session = Session(phoneNumber: "15555550123", token: "preview", isPreview: true)
+        // `-previewShowcase` (App Store screenshots) signs in as an app
+        // account, so the profile shows a first initial, not phone digits.
+        let showcase = ProcessInfo.processInfo.arguments.contains("-previewShowcase")
+        session = Session(phoneNumber: showcase ? "apple:showcase" : "15555550123", token: "preview", isPreview: true)
     }
     #endif
 

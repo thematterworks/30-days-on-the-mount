@@ -41,6 +41,7 @@ struct GroupChatView: View {
                 Button("About this group", systemImage: "person.2") { isShowingInfo = true }
             }
         }
+        .keyboardDismissible()
         .sheet(isPresented: $isShowingInfo) {
             GroupInfoSheet(group: group, onOpenMember: { id in
                 isShowingInfo = false

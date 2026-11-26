@@ -101,6 +101,7 @@ struct MatchSheet: View {
                 }
             }
         }
+        .keyboardDismissible()
         .presentationBackground { ZoeAtmosphere(glow: 0.3) }
     }
 

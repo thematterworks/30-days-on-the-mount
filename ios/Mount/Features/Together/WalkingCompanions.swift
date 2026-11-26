@@ -289,6 +289,7 @@ private struct StartGroupSheet: View {
             }
         }
         .presentationDetents([.medium])
+        .keyboardDismissible()
         .presentationBackground { ZoeAtmosphere(glow: 0.3) }
     }
 }
@@ -347,6 +348,7 @@ private struct JoinGroupSheet: View {
             }
         }
         .presentationDetents([.medium])
+        .keyboardDismissible()
         .presentationBackground { ZoeAtmosphere(glow: 0.3) }
     }
 }

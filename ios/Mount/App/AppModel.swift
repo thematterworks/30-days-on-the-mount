@@ -128,6 +128,13 @@ final class AppModel {
             journey.setCurrentDayForPreview(day)
         }
         if arguments.contains("-previewSummit") { journey.reachSummitForPreview() }
+        // `-previewShowcase`: the sample people and conversations used for
+        // App Store screenshots. `-previewGroup` opens the sample group.
+        if arguments.contains("-previewShowcase") { firstName = "Grace" }
+        if arguments.contains("-previewGroup") {
+            pendingGroup = PreviewTogetherService.sampleGroupID
+            isProfilePresented = true
+        }
         if let index = arguments.firstIndex(of: "-previewStory"), arguments.indices.contains(index + 1),
            let day = Int(arguments[index + 1]) {
             storyRoute = StoryRoute(dayNumber: day)

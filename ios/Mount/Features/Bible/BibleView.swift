@@ -28,6 +28,14 @@ struct BibleView: View {
         }
         .sheet(isPresented: $isSearching) { BibleSearch() }
         .sheet(item: $studying) { request in StudyView(request: request) }
+        #if DEBUG
+        // `-previewStudy`: opens the study of Matthew 5:3, for screenshots.
+        .task {
+            guard ProcessInfo.processInfo.arguments.contains("-previewStudy") else { return }
+            try? await Task.sleep(for: .seconds(1.5))
+            studying = StudyRequest(reference: "Matthew 5:3", text: "Blessed are the poor in spirit, for theirs is the kingdom of heaven.")
+        }
+        #endif
     }
 
     private func reader(_ bible: BibleStore) -> some View {

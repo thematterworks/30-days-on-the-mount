@@ -144,7 +144,17 @@ protocol CompanionService: Sendable {
 /// imitating the companion, so nobody mistakes a preview build for the real
 /// pastoral voice.
 struct PreviewCompanionService: CompanionService {
-    func history() async throws -> [CompanionMessage] { [] }
+    func history() async throws -> [CompanionMessage] {
+        guard ProcessInfo.processInfo.arguments.contains("-previewShowcase") else { return [] }
+        let hour: TimeInterval = 3600
+        return [
+            CompanionMessage(author: .participant, text: "I tried going a whole day without defending myself. I lasted until lunch.", sentAt: .now - 3 * hour, dayNumber: 1),
+            CompanionMessage(author: .companion, text: "Lunch is honest. What happened at lunch?", sentAt: .now - 3 * hour + 40, dayNumber: 1),
+            CompanionMessage(author: .participant, text: "A coworker took credit for something I did, and I explained myself for ten minutes.", sentAt: .now - 2 * hour, dayNumber: 1),
+            CompanionMessage(author: .companion, text: "That stings. Notice what you were protecting in those ten minutes. Jesus calls the poor in spirit blessed: the ones who no longer need to be seen as right. What might it feel like to let that credit go, and still be held?", sentAt: .now - 2 * hour + 50, dayNumber: 1),
+            CompanionMessage(author: .participant, text: "Lighter, honestly. Like setting down a backpack.", sentAt: .now - 40 * 60, dayNumber: 1),
+        ]
+    }
 
     func send(_ text: String, dayNumber: Int) async throws -> CompanionMessage {
         try await Task.sleep(for: .milliseconds(700))

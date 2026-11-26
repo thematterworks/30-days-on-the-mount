@@ -43,3 +43,9 @@ next-env.d.ts
 
 # Supabase CLI link state (supabase link)
 supabase/.temp/
+
+# Marketing: raw screen recordings and the soundtrack source are large and
+# regenerable; the finished assets in marketing/app-store and marketing/social
+# are kept.
+marketing/raw/video/*.mov
+marketing/raw/video/*.mp3

@@ -136,6 +136,9 @@ struct ProfileView: View {
             .tint(Zoe.peach)
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
+            // Content scrolling up passes beneath a frosted bar, not
+            // through the title.
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -165,6 +168,7 @@ struct ProfileView: View {
                 Text("Your progress, reflections, highlights and conversation will be permanently removed. This can't be undone.")
             }
         }
+        .keyboardDismissible()
         .presentationBackground { ZoeAtmosphere(glow: 0.25) }
         .presentationDragIndicator(.visible)
     }

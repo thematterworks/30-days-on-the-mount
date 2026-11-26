@@ -58,6 +58,9 @@ private struct TodayPage: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            // Clear of the screen's rounded edges, and of the scroll indicator.
+            .padding(.horizontal, 10)
+            .padding(.bottom, 8)
         }
     }
 }

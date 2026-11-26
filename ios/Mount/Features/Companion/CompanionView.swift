@@ -56,6 +56,7 @@ struct CompanionView: View {
 
             composer(dayNumber: today?.dayNumber ?? model.journey.progress.currentDay)
         }
+        .keyboardDismissible()
         .task { await companion.refresh() }
     }
 

@@ -140,6 +140,7 @@ struct ShareReflectionSheet: View {
             }
         }
         .onAppear { if text.isEmpty { text = original } }
+        .keyboardDismissible()
         .presentationBackground { ZoeAtmosphere(glow: 0.3) }
     }
 

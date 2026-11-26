@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;1,6..96,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;1,8..60,400&family=Inter:wght@500&display=block" rel="stylesheet">
+<style>
+  /* One App Store marketing frame. Everything is sized in units of the
+     frame's width (--u = 1% of width), so the same design renders at
+     iPhone 6.9", iPad 13" or any other size. */
+  :root { --peach: #f6cdaf; --navy: #2c3254; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; }
+  body {
+    --u: 1vw;
+    position: relative;
+    color: #fff;
+    background: linear-gradient(160deg, #8a8396 0%, #737293 40%, #546391 78%, #3d4572 100%);
+    font-family: "Source Serif 4", Georgia, serif;
+  }
+  .light {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(45% 30% at 75% 12%, rgb(246 205 175 / 0.42), transparent 70%),
+      radial-gradient(55% 35% at 10% 95%, rgb(44 50 84 / 0.55), transparent 70%);
+  }
+  .ridge {
+    position: absolute; left: -8%; width: 116%; opacity: 0.14;
+  }
+  .copy { position: absolute; left: 0; right: 0; text-align: center; padding: 0 calc(7 * var(--u)); }
+  .eyebrow {
+    font-family: Inter, sans-serif; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.32em; color: var(--peach); font-size: calc(2.1 * var(--u));
+  }
+  h1 {
+    font-family: "Bodoni Moda", Didot, serif; font-weight: 400; letter-spacing: -0.01em;
+    line-height: 1.04; margin-top: calc(2.4 * var(--u)); text-wrap: balance;
+  }
+  .sub {
+    margin-top: calc(2.6 * var(--u)); color: rgb(255 255 255 / 0.86); line-height: 1.35;
+    text-wrap: balance;
+  }
+  .device {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(160deg, #2b2e48, #111325);
+    box-shadow: 0 calc(5 * var(--u)) calc(9 * var(--u)) calc(-3 * var(--u)) rgb(15 17 35 / 0.75),
+                inset 0 0 0 calc(0.25 * var(--u)) rgb(255 255 255 / 0.16);
+  }
+  .device img.screen { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .icon { width: calc(22 * var(--u)); border-radius: 22.5%; box-shadow: 0 calc(3 * var(--u)) calc(6 * var(--u)) rgb(15 17 35 / 0.5); }
+  .closing { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 calc(8 * var(--u)); }
+  /* The brand's tagline style: small spaced capitals, as on the lockup. */
+  .tagline { font-family: Inter, sans-serif; font-weight: 500; text-transform: uppercase; letter-spacing: 0.22em; line-height: 1.7; color: rgb(255 255 255 / 0.9); text-wrap: balance; }
+  .pill { margin-top: calc(6 * var(--u)); display: inline-flex; gap: calc(2 * var(--u)); flex-wrap: wrap; justify-content: center; }
+  .pill span { border: calc(0.2 * var(--u)) solid rgb(246 205 175 / 0.55); color: var(--peach); border-radius: 999px; padding: calc(1.2 * var(--u)) calc(3 * var(--u)); font-size: calc(2.6 * var(--u)); }
+</style>
+</head>
+<body>
+<div class="light"></div>
+<div id="stage"></div>
+<script>
+  // Frame description, passed in the URL hash as JSON:
+  // { kind: "iphone" | "ipad", layout: "device" | "closing",
+  //   eyebrow, title, sub, screen (path), titleSize, deviceTop, deviceWidth }
+  const f = JSON.parse(decodeURIComponent(location.hash.slice(1)));
+  const W = innerWidth, H = innerHeight, u = W / 100;
+  const stage = document.getElementById("stage");
+  const ridge = document.createElement("img");
+  ridge.src = "mountain-line.png"; ridge.className = "ridge";
+  ridge.style.top = (f.ridgeTop ?? (f.layout === "closing" ? 58 : 30)) + "%";
+  // The lockup carries its own mountain.
+  if (!f.lockup) document.body.insertBefore(ridge, stage);
+  const lockup = (width) => `<img src="Lockup.png" style="display:block; width:${width * u}px; max-width:100%; margin:0 auto">`;
+  const tagline = (size) => `<p class="tagline" style="font-size:${size * u}px; margin-top:${1.5 * u}px">${f.sub ?? ""}</p>`;
+
+  if (f.layout === "quote") {
+    // A verse card for social posts: the words, the reference, the brand.
+    stage.innerHTML = `
+      <div class="closing" style="justify-content:center">
+        <div class="eyebrow">${f.eyebrow ?? ""}</div>
+        <h1 style="font-size:${(f.titleSize ?? 7.4) * u}px; font-style:italic; margin-top:${4*u}px">&ldquo;${f.title}&rdquo;</h1>
+        <p class="sub" style="font-size:${(f.subSize ?? 3) * u}px; letter-spacing:0.3em; text-transform:uppercase; font-family:Inter,sans-serif; color:rgb(255 255 255 / 0.6)">${f.sub ?? ""}</p>
+        <div style="position:absolute; bottom:${6*u}px; left:0; right:0; display:flex; align-items:center; justify-content:center; gap:${2*u}px">
+          <img src="app-icon.png" style="width:${7*u}px; border-radius:22.5%">
+          <img src="Wordmark.png" style="width:${34*u}px">
+        </div>
+      </div>`;
+    document.title = "ready";
+  } else if (f.layout === "closing" && f.lockup) {
+    stage.innerHTML = `
+      <div class="closing">
+        ${lockup(f.lockupWidth ?? 92)}
+        ${tagline(f.subSize ?? 2.6)}
+        <div class="pill">${(f.pills ?? []).map(p => `<span>${p}</span>`).join("")}</div>
+      </div>`;
+  } else if (f.layout === "closing") {
+    stage.innerHTML = `
+      <div class="closing">
+        <img class="icon" src="app-icon.png">
+        <div class="eyebrow" style="margin-top:${6*u}px">${f.eyebrow ?? ""}</div>
+        <h1 style="font-size:${(f.titleSize ?? 9) * u}px">${f.title}</h1>
+        <p class="sub" style="font-size:${(f.subSize ?? 4) * u}px">${f.sub ?? ""}</p>
+        <div class="pill">${(f.pills ?? []).map(p => `<span>${p}</span>`).join("")}</div>
+      </div>`;
+  } else {
+    const isPad = f.kind === "ipad";
+    const top = (f.copyTop ?? (isPad ? 5 : 7)) ;
+    stage.innerHTML = f.lockup ? `
+      <div class="copy" style="top:${(f.copyTop ?? (isPad ? 2 : 3)) * H / 100}px">
+        ${lockup(f.lockupWidth ?? (isPad ? 70 : 96))}
+        ${tagline(f.subSize ?? (isPad ? 1.9 : 2.6))}
+      </div>` : `
+      <div class="copy" style="top:${top * H / 100}px">
+        <div class="eyebrow">${f.eyebrow ?? ""}</div>
+        <h1 style="font-size:${(f.titleSize ?? (isPad ? 6.4 : 8.6)) * u}px">${f.title}</h1>
+        <p class="sub" style="font-size:${(f.subSize ?? (isPad ? 2.8 : 3.9)) * u}px">${f.sub ?? ""}</p>
+      </div>`;
+    // The device: the real screenshot in a slim frame, its aspect kept.
+    const img = new Image();
+    img.onload = () => {
+      const width = (f.deviceWidth ?? (isPad ? 78 : 76)) * u;
+      const bezel = (isPad ? 1.6 : 2.3) * u;
+      const screenW = width - 2 * bezel;
+      const screenH = screenW * img.naturalHeight / img.naturalWidth;
+      const radius = isPad ? 4.2 * u : 12.5 * u;
+      const device = document.createElement("div");
+      device.className = "device";
+      device.style.width = width + "px";
+      device.style.height = (screenH + 2 * bezel) + "px";
+      device.style.padding = bezel + "px";
+      device.style.borderRadius = radius + "px";
+      device.style.top = ((f.deviceTop ?? (isPad ? 27 : 31)) * H / 100) + "px";
+      img.className = "screen";
+      img.style.borderRadius = (radius - bezel) + "px";
+      device.appendChild(img);
+      stage.appendChild(device);
+      document.title = "ready";
+    };
+    img.src = f.screen;
+  }
+  if (f.layout === "closing") document.title = "ready";
+</script>
+</body>
+</html>

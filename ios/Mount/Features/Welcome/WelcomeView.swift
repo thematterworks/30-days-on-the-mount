@@ -54,6 +54,7 @@ struct WelcomeView: View {
         .scrollIndicators(.hidden)
         .ignoresSafeArea()
         .sensoryFeedback(.selection, trigger: scene)
+        .keyboardDismissible()
         .overlay(alignment: .top) { topBar }
         .overlay(alignment: .trailing) {
             SceneMarks(count: WelcomeScene.allCases.count, index: scene ?? 0).padding(.trailing, 14)

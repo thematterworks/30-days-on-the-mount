@@ -102,6 +102,7 @@ struct OnboardingView: View {
             .padding(.bottom, 24)
         }
         .readableWidth(520)
+        .keyboardDismissible()
         .onAppear { focused = true }
         .task { options = await model.session.options() }
     }
