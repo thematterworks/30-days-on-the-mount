@@ -1,4 +1,7 @@
-# Hourly driver for the three messaging crons.
+# MANUAL BACKUP for the messaging crons. The hourly schedule now runs in the
+# database (supabase/migrations/0025_hourly_messaging_schedule.sql): GitHub's
+# scheduler silently stopped firing after 2026-11-01 and often skipped hours
+# before that. Run this by hand only if the database schedule is down.
 #
 # These endpoints are NOT scheduled by Vercel. Both select recipients by each
 # participant's own preferred_delivery_hour evaluated in their own timezone, so
@@ -21,11 +24,6 @@
 name: Scheduled messaging
 
 on:
-  schedule:
-    # Top of every hour, UTC. Each run serves whichever participants are
-    # currently at their chosen local hour, so this is DST-correct by
-    # construction — no schedule change is needed in November.
-    - cron: "0 * * * *"
   workflow_dispatch:
     inputs:
       confirm:
@@ -41,7 +39,7 @@ concurrency:
 jobs:
   push:
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || inputs.confirm == 'send'
+    if: inputs.confirm == 'send'
     env:
       BASE_URL: https://www.30daysonthemount.com
     steps:
