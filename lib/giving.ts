@@ -58,6 +58,10 @@ export async function giftCheckoutURL(params: { cents: number; monthly: boolean;
     ],
     ...(params.monthly ? {} : { submit_type: "pay" as const, customer_creation: "always" as const }),
     metadata: { source: params.source },
+    // Managed Payments (Stripe as seller of record, on by default for this
+    // account) is for selling digital goods and requires a tax code; a gift
+    // isn't a sale.
+    managed_payments: { enabled: false },
     ...(params.monthly ? { subscription_data: { metadata: { source: params.source } } } : {}),
     integration_identifier: INTEGRATION_IDENTIFIER,
   } as Stripe.Checkout.SessionCreateParams);
