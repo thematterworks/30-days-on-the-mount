@@ -196,7 +196,10 @@ struct TodayWidgetView: View {
                 // As on the journey page: the practice, under its label.
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Today's practice")
-                        .zoeLabelStyle(Zoe.inkMuted)
+                        .font(.system(size: 9, weight: .medium))
+                        .tracking(1.8)
+                        .textCase(.uppercase)
+                        .foregroundStyle(Zoe.inkMuted)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                     Text(snapshot.practiceTitle)
