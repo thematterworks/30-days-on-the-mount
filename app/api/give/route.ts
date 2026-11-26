@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
     const url = await giftCheckoutURL({ cents: body.cents, monthly: body.monthly === true, origin: SITE, source });
     return NextResponse.json({ url });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Something went wrong." }, { status: 502 });
+    console.error("Gift checkout failed", error);
+    return NextResponse.json({ error: "The gift page couldn't be opened just now." }, { status: 502 });
   }
 }

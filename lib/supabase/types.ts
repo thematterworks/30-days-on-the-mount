@@ -64,6 +64,32 @@ export type UserRow = {
   about: string | null;
 };
 
+export type GiftRow = {
+  id: string;
+  kind: "once" | "monthly";
+  amount_cents: number;
+  currency: string;
+  email: string | null;
+  source: string | null;
+  status: "pending" | "paid" | "failed" | "refunded" | "disputed";
+  stripe_customer: string | null;
+  stripe_checkout_session: string | null;
+  stripe_invoice: string | null;
+  stripe_subscription: string | null;
+  stripe_payment_intent: string | null;
+  created_at: string;
+};
+
+export type MonthlyGiverRow = {
+  stripe_subscription: string;
+  stripe_customer: string | null;
+  email: string | null;
+  amount_cents: number | null;
+  status: string;
+  started_at: string;
+  ended_at: string | null;
+};
+
 export type CommunityStrikeRow = {
   id: string;
   phone_number: string;
@@ -306,6 +332,18 @@ export type Database = {
         Row: WalkingMatchRequestRow;
         Insert: Partial<WalkingMatchRequestRow> & { phone_number: string };
         Update: Partial<WalkingMatchRequestRow>;
+        Relationships: [];
+      };
+      gifts: {
+        Row: GiftRow;
+        Insert: Partial<GiftRow> & { kind: GiftRow["kind"]; amount_cents: number };
+        Update: Partial<GiftRow>;
+        Relationships: [];
+      };
+      monthly_givers: {
+        Row: MonthlyGiverRow;
+        Insert: Partial<MonthlyGiverRow> & { stripe_subscription: string; status: string };
+        Update: Partial<MonthlyGiverRow>;
         Relationships: [];
       };
       community_strikes: {
