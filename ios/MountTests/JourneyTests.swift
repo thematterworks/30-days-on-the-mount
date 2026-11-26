@@ -145,7 +145,8 @@ struct MobileAPITests {
         let remote = JourneyRemoteState.Day(
             dayNumber: bundled.dayNumber, title: "Edited title", hook: "", scriptureReference: "",
             scriptureText: "", scriptureAudioURL: nil, teachingVideoURL: "https://example.com/v.mp4",
-            exegesis: "  ", surrender: "", eveningPrompt: "Where did you notice mercy today?"
+            exegesis: "  ", surrender: "", eveningPrompt: "Where did you notice mercy today?",
+            morningQuestion: "What would it feel like to stop defending yourself today?", thresholdTitle: "", thresholdLine: nil
         )
         let merged = bundled.overlaid(remote)
         #expect(merged.title == "Edited title")
@@ -153,6 +154,8 @@ struct MobileAPITests {
         #expect(merged.exegesisText == bundled.exegesisText)
         #expect(merged.practiceTitle == bundled.practiceTitle)
         #expect(merged.teachingVideoURL?.absoluteString == "https://example.com/v.mp4")
+        #expect(merged.morningQuestion == "What would it feel like to stop defending yourself today?")
+        #expect(merged.thresholdTitle == bundled.thresholdTitle)
     }
 }
 

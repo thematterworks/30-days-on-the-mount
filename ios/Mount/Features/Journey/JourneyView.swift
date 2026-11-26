@@ -84,8 +84,10 @@ struct JourneyView: View {
         .sensoryFeedback(.selection, trigger: focusedDay)
         .overlay(alignment: .bottom) { returnToToday }
         .overlay {
+            // Every day, locked ones included: you can look ahead to the
+            // whole mountain, even if a day can't be entered yet.
             DayScrubber(
-                days: journey.days.filter { journey.canOpen($0.dayNumber) },
+                days: journey.days,
                 current: focusedDay == Self.summitID ? nil : focusedDay
             ) { day in go(to: day) }
         }
@@ -217,22 +219,41 @@ private struct DayPage: View {
                         .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.6)
                         .lineLimit(3)
+                    // The day's question — the morning invitation's — as the
+                    // title's subtext: what the day will ask. Only for days
+                    // that are open, so the days ahead keep their quiet.
+                    if state != .locked, let question = day.morningQuestion {
+                        Text(question)
+                            .font(.zoeSerif(.title3).italic())
+                            .foregroundStyle(Zoe.ink.opacity(0.8))
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(4)
+                            .lineLimit(4)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 14)
+                            .padding(.horizontal, 16)
+                    }
                 }
                 .padding(.horizontal, 28)
             }
             .matchedTransitionSource(id: day.dayNumber, in: zoomNamespace)
 
-            // Each day's own line: its practice, the day's logline.
-            if state != .locked {
-                Text(day.practiceTitle)
-                    .font(.zoeSerif(.title3).italic())
-                    .foregroundStyle(Zoe.ink.opacity(0.85))
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 28)
-                    .padding(.horizontal, 40)
-            }
+            Spacer(minLength: 32)
 
-            Spacer(minLength: 40)
+            // Each day's own line: its practice, the day's logline — what
+            // answers the question, waiting behind Enter.
+            if state != .locked {
+                VStack(spacing: 6) {
+                    Text(day.dayNumber == journey.progress.currentDay ? "Today's practice" : "The practice")
+                        .zoeLabelStyle()
+                    Text(day.practiceTitle)
+                        .font(.zoeSerif(.title3))
+                        .foregroundStyle(Zoe.ink.opacity(0.92))
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, 40)
+                .padding(.bottom, 22)
+            }
 
             action(state: state, finished: finished, hasReflection: reflection != nil)
                 // Room beneath for the "Return to today" pill.

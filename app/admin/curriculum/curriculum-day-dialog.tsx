@@ -58,6 +58,8 @@ export function CurriculumDayDialog({
           evening_prompt_text: form.evening_prompt_text,
           morning_push_text: form.morning_push_text,
           midday_push_text: form.midday_push_text,
+          threshold_title: form.threshold_title,
+          threshold_line: form.threshold_line,
           hook_text: form.hook_text,
           scripture_reference: form.scripture_reference,
           scripture_text: form.scripture_text,
@@ -216,6 +218,33 @@ export function CurriculumDayDialog({
                 value={form.evening_prompt_text}
                 onChange={(event) => setForm({ ...form, evening_prompt_text: event.target.value })}
                 placeholder="The evening app notification, and the full SMS body for this day's evening check-in. Blank uses the generic fallback."
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4 rounded-md border border-border p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Threshold (before the day&apos;s story)</p>
+            <p className="text-xs text-muted-foreground">
+              The few breaths before today&apos;s story in the app: a short headline and one gentle line inviting the reader to
+              be present with God. The morning question above also appears under the day&apos;s title in the journey.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="day-threshold-title">Headline</Label>
+              <Input
+                id="day-threshold-title"
+                value={form.threshold_title ?? ""}
+                onChange={(event) => setForm({ ...form, threshold_title: event.target.value })}
+                placeholder="e.g. Come as you are"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="day-threshold-line">Invitation</Label>
+              <Textarea
+                id="day-threshold-line"
+                rows={2}
+                value={form.threshold_line ?? ""}
+                onChange={(event) => setForm({ ...form, threshold_line: event.target.value })}
+                placeholder="e.g. You don't need to bring anything. Breathe, and let God meet you here."
               />
             </div>
           </div>

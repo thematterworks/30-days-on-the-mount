@@ -242,6 +242,9 @@ struct JourneyRemoteState: Sendable {
         let exegesis: String
         let surrender: String
         let eveningPrompt: String?
+        let morningQuestion: String?
+        let thresholdTitle: String?
+        let thresholdLine: String?
     }
 
     let currentDay: Int
@@ -262,6 +265,10 @@ extension JourneyDay {
         func pick(_ value: String, _ fallback: String) -> String {
             value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? fallback : value
         }
+        func nonEmpty(_ value: String?) -> String? {
+            guard let value, !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+            return value
+        }
         return JourneyDay(
             dayNumber: dayNumber,
             title: Self.bareTitle(pick(remote.title, title)),
@@ -274,7 +281,10 @@ extension JourneyDay {
             teachingVideoURL: remote.teachingVideoURL.flatMap(URL.init(string:)) ?? teachingVideoURL,
             scriptureAudioURL: remote.scriptureAudioURL.flatMap(URL.init(string:)) ?? scriptureAudioURL,
             mediaURL: mediaURL,
-            eveningPrompt: remote.eveningPrompt.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 } ?? eveningPrompt
+            eveningPrompt: nonEmpty(remote.eveningPrompt) ?? eveningPrompt,
+            morningQuestion: nonEmpty(remote.morningQuestion) ?? morningQuestion,
+            thresholdTitle: nonEmpty(remote.thresholdTitle) ?? thresholdTitle,
+            thresholdLine: nonEmpty(remote.thresholdLine) ?? thresholdLine
         )
     }
 }

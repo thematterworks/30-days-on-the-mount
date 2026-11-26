@@ -280,8 +280,10 @@ struct StoryStage<Content: View>: View {
     }
 }
 
-/// "The Secret Room awaits" — the web's words for crossing into the day.
-/// A gold ring breathes three times; enter whenever you are ready.
+/// The threshold before today's story: the day's own invitation to slow
+/// down and be present with God (curriculum_days.threshold_title and
+/// threshold_line, edited in the admin), and a ring that breathes three
+/// times. Enter whenever you are ready.
 private struct ThresholdView: View {
     let day: JourneyDay
     let onEnter: () -> Void
@@ -316,9 +318,19 @@ private struct ThresholdView: View {
 
             Text("Day \(day.dayNumber)").zoeLabelStyle(Zoe.peach)
                 .padding(.bottom, 14)
-            Text("The Secret Room awaits")
+            Text(day.thresholdTitle ?? "Pause here")
                 .font(.zoeDisplay(40))
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 32)
+            Text(day.thresholdLine ?? "Take three slow breaths. God is here with you.")
+                .font(.zoeSerif(.body).italic())
+                .foregroundStyle(Zoe.ink.opacity(0.82))
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 40)
+                .padding(.top, 14)
 
             ZStack {
                 Circle().stroke(Zoe.peach.opacity(0.15), lineWidth: 1)
@@ -335,7 +347,7 @@ private struct ThresholdView: View {
                     .contentTransition(.opacity)
             }
             .frame(width: 200, height: 200)
-            .padding(.vertical, 48)
+            .padding(.vertical, 40)
             .accessibilityHidden(true)
 
             Spacer()

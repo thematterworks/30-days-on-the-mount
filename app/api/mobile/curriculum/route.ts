@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await getSupabaseAdmin()
     .from("curriculum_days")
     .select(
-      "day_number, title, hook_text, scripture_reference, scripture_text, scripture_audio_url, teaching_video_url, exegesis_text, surrender_text, ai_guidance_prompt, evening_prompt_text",
+      "day_number, title, hook_text, scripture_reference, scripture_text, scripture_audio_url, teaching_video_url, exegesis_text, surrender_text, ai_guidance_prompt, evening_prompt_text, morning_push_text, threshold_title, threshold_line",
     )
     .gte("day_number", 1)
     .lte("day_number", Math.max(participant.current_day, 0))
@@ -36,6 +36,10 @@ export async function GET(request: NextRequest) {
       exegesis: day.exegesis_text,
       surrender: day.surrender_text,
       eveningPrompt: day.evening_prompt_text,
+      // The morning invitation's question: under the day's title in the journey.
+      morningQuestion: day.morning_push_text || null,
+      thresholdTitle: day.threshold_title || null,
+      thresholdLine: day.threshold_line || null,
     })),
   });
 }

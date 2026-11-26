@@ -11,6 +11,8 @@ interface UpdateBody {
   evening_prompt_text?: string;
   morning_push_text?: string;
   midday_push_text?: string;
+  threshold_title?: string;
+  threshold_line?: string;
   hook_text?: string;
   scripture_reference?: string;
   scripture_text?: string;
@@ -43,6 +45,8 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/admin/
     "evening_prompt_text",
     "morning_push_text",
     "midday_push_text",
+    "threshold_title",
+    "threshold_line",
     "hook_text",
     "scripture_reference",
     "scripture_text",

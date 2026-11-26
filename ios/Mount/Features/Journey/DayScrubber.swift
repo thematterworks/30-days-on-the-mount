@@ -2,8 +2,8 @@ import SwiftUI
 
 /// Touch the right edge of the journey and a dotted path of the days fades
 /// in; slide along it — a light tick at each day, the day's name beside your
-/// finger — and let go to go to that day. Only the days that are open: the
-/// journey still can't be run ahead of.
+/// finger — and let go to go to that day. Every day is on the path; a day
+/// that hasn't opened yet shows as its locked page.
 ///
 /// The edge sits over the journey, not inside its scroll view, so the two
 /// never compete for the touch; and the page moves once, on release, rather

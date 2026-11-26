@@ -20,6 +20,13 @@ struct JourneyDay: Codable, Identifiable, Hashable, Sendable {
     /// The evening check-in question. Comes from the server; the bundled
     /// curriculum doesn't carry it.
     var eveningPrompt: String? = nil
+    /// The morning invitation's question, under the day's title in the
+    /// journey. From the server, for days that are open.
+    var morningQuestion: String? = nil
+    /// The threshold before the day's story: a short headline and one
+    /// gentle line inviting the reader to be present with God.
+    var thresholdTitle: String? = nil
+    var thresholdLine: String? = nil
 
     var id: Int { dayNumber }
 

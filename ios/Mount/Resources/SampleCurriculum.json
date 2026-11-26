@@ -10,7 +10,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "What would it feel like to stop defending yourself today?",
+    "thresholdTitle": "Come as you are",
+    "thresholdLine": "You don't need to bring anything. Breathe, and let God meet you here."
   },
   {
     "dayNumber": 2,
@@ -23,7 +26,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "Whose grief could you simply sit beside today, without fixing it?",
+    "thresholdTitle": "Bring what's heavy",
+    "thresholdLine": "Whatever you're grieving, you can set it down for a moment. You're not alone in it."
   },
   {
     "dayNumber": 3,
@@ -36,7 +42,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "Could you give something up today and let no one know you did?",
+    "thresholdTitle": "Soften your grip",
+    "thresholdLine": "Unclench your hands, your jaw, your shoulders. Let the Spirit steady you."
   },
   {
     "dayNumber": 4,
@@ -49,7 +58,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "What are you really feeding on when you reach for your phone?",
+    "thresholdTitle": "What are you hungry for?",
+    "thresholdLine": "Notice the ache beneath the busyness, and ask God to fill it."
   },
   {
     "dayNumber": 5,
@@ -62,7 +74,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "Who owes you something you could let go of today?",
+    "thresholdTitle": "Receive mercy first",
+    "thresholdLine": "Breathe in the mercy that holds you. Breathe out the grudge you've been carrying."
   },
   {
     "dayNumber": 6,
@@ -75,7 +90,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "Who are you really performing for?",
+    "thresholdTitle": "Clear a little space",
+    "thresholdLine": "Let the noise settle. A quiet heart sees more of God."
   },
   {
     "dayNumber": 7,
@@ -88,7 +106,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "Is there a door you've been waiting for someone else to open?",
+    "thresholdTitle": "Peace begins here",
+    "thresholdLine": "Before you make peace with anyone else, let the Spirit make peace in you."
   },
   {
     "dayNumber": 8,
@@ -101,7 +122,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "How often does your inner courtroom open in a day? Count today.",
+    "thresholdTitle": "Notice your anger",
+    "thresholdLine": "No judgment, only honesty. Hold it gently in God's light."
   },
   {
     "dayNumber": 9,
@@ -114,7 +138,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "What if every face you passed today carried the image of God?",
+    "thresholdTitle": "See with kinder eyes",
+    "thresholdLine": "Ask the Spirit to help you see people as people, starting today."
   },
   {
     "dayNumber": 10,
@@ -127,7 +154,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "Could you go one whole day with no excuses at all?",
+    "thresholdTitle": "No performance needed",
+    "thresholdLine": "You don't have to impress anyone here. Simply be honest with God."
   },
   {
     "dayNumber": 11,
@@ -140,7 +170,10 @@
     "surrenderText": "Unclench your hands. Breathe out the blow you are still holding. Say quietly: I do not have to make this even. I am already held. Then step back into your day carrying nothing to defend.",
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "When someone wrongs you today, what will you do with the blow?",
+    "thresholdTitle": "Lay down the score",
+    "thresholdLine": "Whatever you've been keeping count of, put it down for these few minutes."
   },
   {
     "dayNumber": 12,
@@ -153,7 +186,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "What would it look like to do twice what's asked of you today, gladly?",
+    "thresholdTitle": "Make room for more",
+    "thresholdLine": "Ask for a heart that goes further than it has to."
   },
   {
     "dayNumber": 13,
@@ -166,7 +202,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "Who is the hardest person for you to pray for?",
+    "thresholdTitle": "Bring someone to mind",
+    "thresholdLine": "Someone hard to love. You don't have to feel warm yet. Just hold them before God."
   },
   {
     "dayNumber": 14,
@@ -179,7 +218,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "Could you give something away today that no one ever finds out about?",
+    "thresholdTitle": "No one is watching",
+    "thresholdLine": "This time is just between you and God. That's the gift of it."
   },
   {
     "dayNumber": 15,
@@ -192,7 +234,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "Can you find twenty minutes of true silence today?",
+    "thresholdTitle": "Close the door",
+    "thresholdLine": "Jesus said to go into your room and pray in secret. For the next few minutes, this is that room."
   },
   {
     "dayNumber": 16,
@@ -205,7 +250,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "What changes when \"I\" becomes \"we\" in your prayers?",
+    "thresholdTitle": "You are someone's child",
+    "thresholdLine": "Begin where Jesus began, with \"Our Father,\" and let that be enough."
   },
   {
     "dayNumber": 17,
@@ -218,7 +266,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "What comfort could you give up today without anyone knowing?",
+    "thresholdTitle": "Set something down",
+    "thresholdLine": "Your phone, your plans, your appetite. Even for a moment, make room."
   },
   {
     "dayNumber": 18,
@@ -231,7 +282,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "What do you own that you'd find hard to give away?",
+    "thresholdTitle": "Where is your heart?",
+    "thresholdLine": "Breathe slowly, and notice what you've been holding most tightly."
   },
   {
     "dayNumber": 19,
@@ -244,7 +298,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "What beauty have you stopped noticing?",
+    "thresholdTitle": "Let the light in",
+    "thresholdLine": "Turn toward God the way you'd turn your face to the morning sun."
   },
   {
     "dayNumber": 20,
@@ -257,7 +314,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "What are you most anxious about tomorrow?",
+    "thresholdTitle": "Consider the lilies",
+    "thresholdLine": "Nothing is required of you right now. Be held, the way the flowers are."
   },
   {
     "dayNumber": 21,
@@ -270,7 +330,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "What would it take for you to truly stop today?",
+    "thresholdTitle": "Rest is holy",
+    "thresholdLine": "You don't have to earn this. Stop, and simply be with God."
   },
   {
     "dayNumber": 22,
@@ -283,7 +346,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "Whose flaw is easiest for you to see?",
+    "thresholdTitle": "Look gently inward",
+    "thresholdLine": "Before judging anyone else, let the Spirit show you yourself, kindly."
   },
   {
     "dayNumber": 23,
@@ -296,7 +362,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "Where are you trying too hard to convince someone?",
+    "thresholdTitle": "Guard what's sacred",
+    "thresholdLine": "Some things are precious. Bring them here, where they're safe."
   },
   {
     "dayNumber": 24,
@@ -309,7 +378,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "What are you trying to control that you could simply ask for?",
+    "thresholdTitle": "Ask",
+    "thresholdLine": "What do you need today? Say it plainly. Your Father is listening."
   },
   {
     "dayNumber": 25,
@@ -322,7 +394,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "How do you most wish someone would treat you right now?",
+    "thresholdTitle": "Receive what you'd give",
+    "thresholdLine": "Breathe in the kindness you hope to show others today."
   },
   {
     "dayNumber": 26,
@@ -335,7 +410,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "What do you reach for when you don't want to feel something?",
+    "thresholdTitle": "One step at a time",
+    "thresholdLine": "The narrow way is walked one breath at a time. Take this one."
   },
   {
     "dayNumber": 27,
@@ -348,7 +426,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "If someone only saw your last week, what would they say you value?",
+    "thresholdTitle": "What is growing in you?",
+    "thresholdLine": "Be still, and notice the quiet ways the Spirit is changing you."
   },
   {
     "dayNumber": 28,
@@ -361,7 +442,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "Can you spend today with nothing at all to accomplish?",
+    "thresholdTitle": "Come back to rest",
+    "thresholdLine": "Return to stillness. It's still here, and so is God."
   },
   {
     "dayNumber": 29,
@@ -374,7 +458,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "Looking back over these weeks, what has lost its grip on you?",
+    "thresholdTitle": "Gather it up",
+    "thresholdLine": "Bring everything these days have stirred, and let God hold it together."
   },
   {
     "dayNumber": 30,
@@ -387,7 +474,10 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "Which practice from this journey scared you the most?",
+    "thresholdTitle": "Stand on solid ground",
+    "thresholdLine": "Breathe deep. You're building on something that holds."
   },
   {
     "dayNumber": 31,
@@ -400,6 +490,9 @@
     "surrenderText": null,
     "teachingVideoURL": null,
     "scriptureAudioURL": null,
-    "mediaURL": null
+    "mediaURL": null,
+    "morningQuestion": "What does it feel like to be made new?",
+    "thresholdTitle": "This is only the beginning",
+    "thresholdLine": "The life Jesus offers goes on from here. Breathe it in."
   }
 ]

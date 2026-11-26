@@ -165,6 +165,9 @@ export type CurriculumDayRow = {
   evening_prompt_text: string;
   morning_push_text: string;
   midday_push_text: string;
+  /** The threshold before the day's story: a short invitation to be present. */
+  threshold_title: string;
+  threshold_line: string;
   hook_text: string;
   scripture_reference: string;
   scripture_text: string;
