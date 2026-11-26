@@ -6,6 +6,7 @@ options:
   bundleIdPrefix: com.thematterworks
   deploymentTarget:
     iOS: "18.0"
+    watchOS: "11.0"
   createIntermediateGroups: true
   generateEmptyDirectories: true
 
@@ -74,6 +75,7 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - target: MountWidgets
+      - target: MountWatch
       - package: ElevenLabs
 
   MountWidgets:
@@ -95,6 +97,56 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.thematterworks.mount.widgets
+
+  # The Apple Watch app: today's day and three breaths, fed by the iPhone
+  # (Mount/Core/WatchBridge.swift). Embedded in the iPhone app.
+  MountWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: MountWatch
+      - path: Shared/JourneySnapshot.swift
+      - path: Shared/Zoe.swift
+    info:
+      path: MountWatch/Info.plist
+      properties:
+        CFBundleDisplayName: On the Mount
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.thematterworks.mount
+    entitlements:
+      path: MountWatch/MountWatch.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.thematterworks.mount]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.thematterworks.mount.watchkitapp
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "4"
+    dependencies:
+      - target: MountWatchWidgets
+
+  # The watch-face complication.
+  MountWatchWidgets:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - path: MountWatchWidgets
+      - path: Shared/JourneySnapshot.swift
+      - path: Shared/Zoe.swift
+    info:
+      path: MountWatchWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: On the Mount
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: MountWatchWidgets/MountWatchWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.thematterworks.mount]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.thematterworks.mount.watchkitapp.widgets
+        TARGETED_DEVICE_FAMILY: "4"
 
   MountTests:
     type: bundle.unit-test

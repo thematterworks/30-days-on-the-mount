@@ -165,10 +165,11 @@ final class JourneyStore {
     /// such as the morning hour.
     func refreshWidgets() { publishSnapshot() }
 
-    /// Hands the widgets just what they render, then asks them to redraw.
+    /// Hands the widgets (and the watch) just what they render, then asks
+    /// them to redraw.
     private func publishSnapshot() {
         guard let today else { return }
-        SharedStore.saveSnapshot(JourneySnapshot(
+        let snapshot = JourneySnapshot(
             dayNumber: today.dayNumber,
             totalDays: totalDays,
             title: today.title,
@@ -180,7 +181,9 @@ final class JourneyStore {
             verseReference: today.scriptureReference,
             eveningPrompt: today.eveningPrompt,
             eveningHour: (settings.morningHour + 11) % 24
-        ))
+        )
+        SharedStore.saveSnapshot(snapshot)
         WidgetCenter.shared.reloadAllTimelines()
+        WatchBridge.shared.send(snapshot)
     }
 }
