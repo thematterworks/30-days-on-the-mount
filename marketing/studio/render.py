@@ -16,7 +16,7 @@ CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 SIZES = {"iphone": (1320, 2868), "ipad": (2064, 2752)}
 
-TAGLINE = "A 30-day invitation to walk in the wisdom of Jesus' most famous sermon"
+TAGLINE = "A 30-day invitation to walk in the<br>wisdom of Jesus' most famous sermon"
 
 # The story the screenshots tell, in order. The first three carry the most
 # weight in search results.
