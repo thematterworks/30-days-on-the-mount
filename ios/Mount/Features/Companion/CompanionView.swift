@@ -45,6 +45,7 @@ struct CompanionView: View {
                     }
                 }
                 .padding(.horizontal, 24)
+                .readableWidth(720)
                 .padding(.vertical, 20)
             }
             .defaultScrollAnchor(.bottom)

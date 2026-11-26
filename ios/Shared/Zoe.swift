@@ -85,6 +85,12 @@ extension Font {
 }
 
 extension View {
+    /// Keeps a column of reading to a comfortable line length, centered,
+    /// however wide the window (an iPad in landscape).
+    func readableWidth(_ width: CGFloat = 680) -> some View {
+        frame(maxWidth: width).frame(maxWidth: .infinity)
+    }
+
     func zoeLabelStyle(_ color: Color = Zoe.inkMuted) -> some View {
         font(.zoeLabel).tracking(2.4).textCase(.uppercase).foregroundStyle(color)
     }

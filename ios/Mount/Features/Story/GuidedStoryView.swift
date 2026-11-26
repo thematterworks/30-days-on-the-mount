@@ -117,7 +117,7 @@ struct GuidedStoryView: View {
                             // Clear of the home indicator.
                             .padding(.top, 16)
                             .padding(.bottom, 40)
-                            .frame(maxWidth: .infinity)
+                            .readableWidth()
                     }
                     .containerRelativeFrame([.horizontal, .vertical])
                     .scrollTransition(.interactive, axis: .vertical) { view, phase in
@@ -351,6 +351,7 @@ private struct ThresholdView: View {
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 32)
+            .readableWidth(460)
             .padding(.bottom, 24)
         }
         .sensoryFeedback(.impact(weight: .light, intensity: 0.4), trigger: expanded)

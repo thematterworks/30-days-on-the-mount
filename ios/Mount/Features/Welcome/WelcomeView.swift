@@ -37,6 +37,7 @@ struct WelcomeView: View {
                     WelcomeSceneView(scene: item, isActive: scene == item.rawValue) {
                         isShowingFilm = true
                     }
+                    .readableWidth(620)
                     .containerRelativeFrame([.horizontal, .vertical])
                     .scrollTransition(.interactive, axis: .vertical) { view, phase in
                         view

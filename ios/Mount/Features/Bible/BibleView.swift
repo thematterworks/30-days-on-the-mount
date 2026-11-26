@@ -57,6 +57,7 @@ struct BibleView: View {
                     chapterNavigation
                 }
                 .padding(.horizontal, 28)
+                .readableWidth()
                 .padding(.bottom, selection.isEmpty ? 60 : 140)
             }
             .scrollIndicators(.hidden)

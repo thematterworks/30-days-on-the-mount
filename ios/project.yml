@@ -22,7 +22,8 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
-    TARGETED_DEVICE_FAMILY: "1"
+    # iPhone and iPad.
+    TARGETED_DEVICE_FAMILY: "1,2"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     # Automatic signing under The Matterworks team, so Xcode provisions the
     # App Group, push and Live Activity entitlements for device builds.
@@ -46,6 +47,12 @@ targets:
           UIColorName: LaunchBackground
         UIUserInterfaceStyle: Dark
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        # iPad windows can be any shape and any way up.
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         NSSupportsLiveActivities: true
         NSMicrophoneUsageDescription: Speak a reflection, a message to your companion, or talk with your companion out loud.
         NSSpeechRecognitionUsageDescription: Your spoken words are turned into text on this iPhone, so you can speak a reflection instead of typing it.

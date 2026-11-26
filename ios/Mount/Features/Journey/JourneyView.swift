@@ -11,6 +11,25 @@ struct JourneyView: View {
     @State private var focusedDay: Int?
     @State private var isPickingDay = false
     @State private var isRewatchingWelcome = false
+    /// The scroll view's own height, measured. Every page is exactly this
+    /// tall: containerRelativeFrame measured against a taller container on
+    /// iPad, so pages came to rest between days.
+    @State private var pageHeight: CGFloat = 0
+    /// A move asked for in code — today at launch, the day picker, the
+    /// scrubber, "Return to today". Made with the scroll view's proxy:
+    /// setting the bound scroll position alone was ignored on iPad.
+    @State private var jump: Jump?
+
+    private struct Jump: Equatable {
+        let day: Int
+        let animation: Animation?
+        let id = UUID()
+        static func == (lhs: Jump, rhs: Jump) -> Bool { lhs.id == rhs.id }
+    }
+
+    private func go(to day: Int, animation: Animation? = nil) {
+        jump = Jump(day: day, animation: animation)
+    }
 
     var body: some View {
         let journey = model.journey
@@ -24,22 +43,23 @@ struct JourneyView: View {
             WelcomeView { isRewatchingWelcome = false }
         }
         .sheet(isPresented: $isPickingDay) {
-            DayPicker { day in withAnimation(.smooth(duration: 0.6)) { focusedDay = day } }
+            DayPicker { day in go(to: day, animation: .smooth(duration: 0.6)) }
         }
     }
 
     private func pages(_ journey: JourneyStore) -> some View {
+        ScrollViewReader { proxy in
         ScrollView(.vertical) {
             // Not lazy: opening on a late day, a lazy stack has to guess the
             // heights above it and comes to rest between two pages.
             VStack(spacing: 0) {
                 // One page above Day 1: the welcome, to watch again.
                 WelcomeAgainPage { isRewatchingWelcome = true }
-                    .containerRelativeFrame(.vertical)
+                    .frame(height: pageHeight > 0 ? pageHeight : nil)
                     .id(JourneyView.welcomeID)
                 ForEach(journey.days) { day in
                     DayPage(day: day, zoomNamespace: zoomNamespace)
-                        .containerRelativeFrame(.vertical)
+                        .frame(height: pageHeight > 0 ? pageHeight : nil)
                         .scrollTransition(.interactive, axis: .vertical) { content, phase in
                             content
                                 .opacity(phase.isIdentity ? 1 : 0)
@@ -50,7 +70,7 @@ struct JourneyView: View {
                 }
                 if journey.hasReachedSummit {
                     SummitPage()
-                        .containerRelativeFrame(.vertical)
+                        .frame(height: pageHeight > 0 ? pageHeight : nil)
                         .id(JourneyView.summitID)
                 }
             }
@@ -67,15 +87,35 @@ struct JourneyView: View {
             DayScrubber(
                 days: journey.days.filter { journey.canOpen($0.dayNumber) },
                 current: focusedDay == Self.summitID ? nil : focusedDay
-            ) { day in focusedDay = day }
+            ) { day in go(to: day) }
         }
         // Once the pages are laid out, open on today.
         .task(id: journey.days.count) {
             await Task.yield()
-            focusedDay = journey.progress.currentDay
+            go(to: journey.progress.currentDay)
+        }
+        .onChange(of: jump) { _, jump in
+            guard let jump else { return }
+            withAnimation(jump.animation) { proxy.scrollTo(jump.day, anchor: .top) }
+            focusedDay = jump.day
+        }
+        // The scroll view's height: reported at first layout as well as on
+        // every change (an iPad window turned or resized).
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+            guard height > 0, abs(height - pageHeight) > 0.5 else { return }
+            let isFirstLayout = pageHeight == 0
+            pageHeight = height
+            // First layout: today. A new window size: the same day as
+            // before, re-snapped to the new page height.
+            let day = isFirstLayout ? journey.progress.currentDay : (focusedDay ?? journey.progress.currentDay)
+            Task {
+                await Task.yield()
+                go(to: day)
+            }
         }
         .onChange(of: journey.progress.currentDay) { _, day in
-            withAnimation(.smooth(duration: 0.8)) { focusedDay = day }
+            go(to: day, animation: .smooth(duration: 0.8))
+        }
         }
     }
 
@@ -88,7 +128,7 @@ struct JourneyView: View {
         let today = model.journey.progress.currentDay
         if let focusedDay, focusedDay != today, focusedDay != Self.summitID, focusedDay != Self.welcomeID {
             Button {
-                withAnimation(.smooth(duration: 0.9)) { self.focusedDay = today }
+                go(to: today, animation: .smooth(duration: 0.9))
             } label: {
                 Label(focusedDay > today ? "Back to today" : "Return to today",
                       systemImage: focusedDay > today ? "chevron.up" : "chevron.down")
@@ -320,4 +360,5 @@ private struct WelcomeAgainPage: View {
         .frame(maxWidth: .infinity)
     }
 }
+
 
