@@ -42,7 +42,11 @@ STORY = [
          title="Notice what changed", sub="Write or speak a reflection. Only you and your companion see it."),
 ]
 
-CLOSING = dict(name="09-begin", layout="closing", lockup=True, sub=TAGLINE,
+WATCH = dict(name="09-watch", layout="watch", eyebrow="Apple Watch",
+             title="On your wrist, too", sub="Today's words and practice at a glance, and three slow breaths whenever you need them.",
+             watch=True)
+
+CLOSING = dict(name="10-begin", layout="closing", lockup=True, sub=TAGLINE,
                pills=["Thirty days", "Ten minutes a day", "Free"])
 
 
@@ -53,6 +57,10 @@ def frames():
                 continue  # not captured on iPad
             yield kind, dict(frame, kind=kind, layout="device",
                              screen=os.path.join(ROOT, "raw", kind, frame["screen"] + ".png"))
+        yield kind, dict(WATCH, kind=kind, screens=[os.path.join(ROOT, "raw", "watch", "01-today.png"),
+                                                    os.path.join(ROOT, "raw", "watch", "03-breathing.png")],
+                         watchWidth=46 if kind == "iphone" else 30, deviceTop=38 if kind == "iphone" else 44,
+                         spread=24 if kind == "iphone" else 18, stagger=14 if kind == "iphone" else 6)
         yield kind, dict(CLOSING, kind=kind, lockupWidth=92 if kind == "iphone" else 74,
                          subSize=2.7 if kind == "iphone" else 2.0)
 
@@ -79,6 +87,10 @@ SOCIAL = [
     ("story-01-journey", (1080, 1920), dict(STORY[0], kind="iphone", layout="device", deviceTop=34)),
     ("story-02-together", (1080, 1920), dict(STORY[6], kind="iphone", layout="device", deviceTop=34)),
     ("story-03-begin", (1080, 1920), dict(CLOSING, kind="iphone", lockupWidth=92, subSize=2.9)),
+    ("story-04-watch", (1080, 1920), dict(WATCH, kind="iphone", watchWidth=46, deviceTop=38, spread=24, stagger=14,
+                                          screens=["raw/watch/01-today.png", "raw/watch/03-breathing.png"])),
+    ("post-04-watch", (1080, 1080), dict(WATCH, kind="ipad", watchWidth=26, deviceTop=52, titleSize=6.6, subSize=2.6, copyTop=7,
+                                         screens=["raw/watch/01-today.png", "raw/watch/03-breathing.png"])),
     ("post-01-poor-in-spirit", (1080, 1080), dict(layout="quote", eyebrow="Day 1 · Matthew 5:3", title="Blessed are the poor in spirit, for theirs is the kingdom of heaven.", sub="Thirty days in the words of Jesus", titleSize=6.6, subSize=2.2)),
     ("post-02-love-your-enemies", (1080, 1080), dict(layout="quote", eyebrow="Day 13 · Matthew 5:44", title="Love your enemies and pray for those who persecute you.", sub="Thirty days in the words of Jesus", titleSize=7, subSize=2.2)),
     ("post-03-tomorrow", (1080, 1080), dict(layout="quote", eyebrow="Day 20 · Matthew 6:34", title="Do not worry about tomorrow, for tomorrow will worry about itself.", sub="Thirty days in the words of Jesus", titleSize=6.6, subSize=2.2)),
@@ -91,6 +103,8 @@ def render_social():
     for name, (w, h), frame in SOCIAL:
         if frame.get("screen"):
             frame = dict(frame, screen=os.path.join(ROOT, "raw", "iphone", frame["screen"] + ".png"))
+        if frame.get("screens"):
+            frame = dict(frame, screens=[os.path.join(ROOT, path) for path in frame["screens"]])
         out = os.path.join(folder, f"{name}-{w}x{h}.png")
         url = "file://" + os.path.join(HERE, "frame.html") + "#" + urllib.parse.quote(json.dumps(frame))
         subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars",

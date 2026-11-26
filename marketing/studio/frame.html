@@ -86,6 +86,32 @@
         </div>
       </div>`;
     document.title = "ready";
+  } else if (f.layout === "watch") {
+    // An Apple Watch, drawn: band, case, crown, and the real screen.
+    const isPad = f.kind === "ipad";
+    const caseW = (f.watchWidth ?? (isPad ? 34 : 50)) * u;
+    const screens = (f.screens ?? [f.screen]).slice(0, 2);
+    const watch = (src, tilt, dx) => {
+      const caseH = caseW * 1.2;
+      const bezel = caseW * 0.075;
+      return `
+      <div style="position:absolute; left:calc(50% + ${dx * u}px); top:${(f.deviceTop ?? 40) * H / 100 + (tilt > 0 ? (f.stagger ?? 0) * H / 100 : 0)}px; transform:translateX(-50%) rotate(${tilt}deg); width:${caseW}px; height:${caseH}px">
+        <div style="position:absolute; left:${caseW*0.14}px; right:${caseW*0.14}px; top:${-caseH*0.62}px; height:${caseH*0.72}px; border-radius:${caseW*0.12}px; background:linear-gradient(180deg, #2a2e4a, #3a3f63)"></div>
+        <div style="position:absolute; left:${caseW*0.14}px; right:${caseW*0.14}px; bottom:${-caseH*0.62}px; height:${caseH*0.72}px; border-radius:${caseW*0.12}px; background:linear-gradient(0deg, #2a2e4a, #3a3f63)"></div>
+        <div style="position:absolute; right:${-caseW*0.045}px; top:${caseH*0.26}px; width:${caseW*0.07}px; height:${caseH*0.16}px; border-radius:${caseW*0.03}px; background:linear-gradient(90deg, #4a4f72, #20233a)"></div>
+        <div style="position:absolute; inset:0; border-radius:${caseW*0.27}px; padding:${bezel}px; background:linear-gradient(160deg, #3a3e5c, #12142a); box-shadow:0 ${4*u}px ${8*u}px rgb(15 17 35 / 0.6), inset 0 0 0 ${0.25*u}px rgb(255 255 255 / 0.18)">
+          <img src="${src}" style="display:block; width:100%; height:100%; object-fit:cover; border-radius:${caseW*0.2}px">
+        </div>
+      </div>`;
+    };
+    stage.innerHTML = `
+      <div class="copy" style="top:${(f.copyTop ?? 6) * H / 100}px">
+        <div class="eyebrow">${f.eyebrow ?? ""}</div>
+        <h1 style="font-size:${(f.titleSize ?? (isPad ? 6.4 : 8.6)) * u}px">${f.title}</h1>
+        <p class="sub" style="font-size:${(f.subSize ?? (isPad ? 2.8 : 3.9)) * u}px">${f.sub ?? ""}</p>
+      </div>
+      ${screens.length === 2 ? watch(screens[1], 7, f.spread ?? 18) + watch(screens[0], -6, -(f.spread ?? 18) + 2) : watch(screens[0], 0, 0)}`;
+    document.title = "ready";
   } else if (f.layout === "closing" && f.lockup) {
     stage.innerHTML = `
       <div class="closing">
