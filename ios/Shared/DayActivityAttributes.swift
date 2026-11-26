@@ -23,4 +23,15 @@ struct DayActivityAttributes: ActivityAttributes {
     var totalDays: Int
     var title: String
     var practiceTitle: String
+    /// The day's scripture, e.g. "Matthew 5:4". Optional so activities
+    /// started before it existed still decode.
+    var scriptureReference: String?
+
+    /// The reference short enough for the Dynamic Island: "Matt 5:4".
+    var shortReference: String? {
+        scriptureReference?
+            .replacingOccurrences(of: "Matthew", with: "Matt")
+            .replacingOccurrences(of: "Corinthians", with: "Cor")
+            .replacingOccurrences(of: "-", with: "\u{2013}")
+    }
 }

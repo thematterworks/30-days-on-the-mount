@@ -48,7 +48,11 @@ struct LiveActivityController: Sendable {
         }
         let content = ActivityContent(state: state, staleDate: until)
 
-        if let existing = Activity<DayActivityAttributes>.activities.first(where: { $0.attributes.dayNumber == day.dayNumber }) {
+        // Today's activity, if it already carries the day's scripture; one
+        // started before the scripture was added is replaced below.
+        if let existing = Activity<DayActivityAttributes>.activities.first(where: {
+            $0.attributes.dayNumber == day.dayNumber && $0.attributes.scriptureReference != nil
+        }) {
             await existing.update(content)
             return
         }
@@ -59,7 +63,8 @@ struct LiveActivityController: Sendable {
             dayNumber: day.dayNumber,
             totalDays: totalDays,
             title: day.title,
-            practiceTitle: day.practiceTitle
+            practiceTitle: day.practiceTitle,
+            scriptureReference: day.scriptureReference
         )
         do {
             // pushType becomes .token in Phase 3, when the server updates it.

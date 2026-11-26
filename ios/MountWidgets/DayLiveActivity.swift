@@ -46,9 +46,12 @@ struct DayLiveActivity: Widget {
                     }
                 }
             } compactLeading: {
-                Text("\(context.attributes.dayNumber)")
-                    .font(.system(.caption, design: .monospaced, weight: .semibold))
+                // The day's scripture, the day number until it's known.
+                Text(context.attributes.shortReference ?? "\(context.attributes.dayNumber)")
+                    .font(.system(.caption, design: .serif, weight: .semibold))
                     .foregroundStyle(Zoe.peach)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             } compactTrailing: {
                 Image(systemName: symbol(for: context.state.phase))
                     .foregroundStyle(Zoe.peach)
